@@ -44,8 +44,21 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
 
         if path == "/metrics":
             self._handle_metrics()
+        elif path in ("/", ""):
+            self._send_json({
+                "status": "alive",
+                "message": "MX2 Headless Gateway Daemon running. Administer using mx2ctl."
+            }, 200)
+        elif path == "/health":
+            self._send_json({"status": "healthy"}, 200)
         else:
             self._send_json({"error": "Headless Daemon. No web UI served."}, 404)
+
+    def do_HEAD(self) -> None:
+        """Handles HEAD probes for liveness checks."""
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
 
     def do_POST(self) -> None:
         """Processes incoming REST API requests."""
