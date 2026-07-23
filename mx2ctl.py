@@ -7,17 +7,18 @@ quarantine queues, resolve DID keys, and test translations.
 
 import argparse
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
 from typing import Any
 
-DEFAULT_URL = "http://127.0.0.1:8000"
+MX2_URL = os.getenv("MX2_URL", "http://127.0.0.1:8000").rstrip("/")
 
 
 def _request_api(endpoint: str, payload: dict[str, Any] = None) -> dict[str, Any]:
     """Helper to query the headless daemon REST API."""
-    url = f"{DEFAULT_URL}{endpoint}"
+    url = f"{MX2_URL}{endpoint}"
     data = json.dumps(payload or {}).encode("utf-8")
 
     req = urllib.request.Request(
@@ -38,7 +39,7 @@ def _request_api(endpoint: str, payload: dict[str, Any] = None) -> dict[str, Any
             print(f"\033[91m[-] HTTP Error [{err.code}]: {err.reason}\033[0m")
         sys.exit(1)
     except urllib.error.URLError:
-        print(f"\033[91m[-] Connection Error: Can't reach MX2 daemon at {DEFAULT_URL}. Is it running?\033[0m")
+        print(f"\033[91m[-] Connection Error: Can't reach MX2 daemon at {MX2_URL}. Is it running?\033[0m")
         sys.exit(1)
 
 
@@ -53,7 +54,7 @@ def cmd_status(args: argparse.Namespace) -> None:
     print(" MX2 GATEWAY DAEMON STATUS ".center(50, "="))
     print("=" * 50 + "\033[0m")
     print("\033[92mDaemon State : RUNNING\033[0m")
-    print(f"API Target   : {DEFAULT_URL}")
+    print(f"API Target   : {MX2_URL}")
     print("-" * 50)
 
     neg = res.get("negotiated", {})

@@ -1,5 +1,4 @@
-"""Unit tests for the mx2ctl CLI administration utility."""
-
+import os
 import re
 import subprocess
 import sys
@@ -15,28 +14,25 @@ class TestMX2ControlCLI(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
-        # Start HTTPServer on loopback with port 8000 for CLI integration testing.
-        try:
-            cls.server = HTTPServer(("127.0.0.1", 8000), MX2SandboxHTTPHandler)
-            cls.port = 8000
-            cls.server_thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
-            cls.server_thread.start()
-        except OSError:
-            # Port 8000 occupied (e.g. by the daemon running in background), which is fine!
-            cls.server = None
-            cls.port = None
+        # Start HTTPServer on loopback with port 0 (OS chooses a random free port)
+        cls.server = HTTPServer(("127.0.0.1", 0), MX2SandboxHTTPHandler)
+        cls.host, cls.port = cls.server.server_address
+        cls.base_url = f"http://{cls.host}:{cls.port}"
+        cls.server_thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.server_thread.start()
 
     @classmethod
     def tearDownClass(cls) -> None:
-        if cls.server:
-            cls.server.shutdown()
-            cls.server.server_close()
-            cls.server_thread.join()
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.server_thread.join()
 
     def _run_cli(self, args: list[str]) -> tuple[int, str, str]:
         """Runs the mx2ctl CLI as a subprocess and strips ANSI escape codes."""
         cmd = [sys.executable, "mx2ctl.py"] + args
-        res = subprocess.run(cmd, capture_output=True, text=True)
+        # Pass target port via environment variable
+        env = {**os.environ, "MX2_URL": self.base_url}
+        res = subprocess.run(cmd, capture_output=True, text=True, env=env)
 
         # Strip ANSI escape sequences (colors) from output
         ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
@@ -74,10 +70,7 @@ class TestMX2ControlCLI(unittest.TestCase):
         self.assertIn("Found TXT: v=MX2", stdout)
 
     def test_cli_daemon_dependent_commands(self) -> None:
-        """Tests commands that query the daemon (runs only if test server started)."""
-        if not self.server:
-            # Skip if port 8000 was busy and we couldn't start our local test server
-            self.skipTest("Local server on port 8000 not started (port occupied)")
+        """Tests commands that query the daemon."""
 
         # Test Status
         code, stdout, stderr = self._run_cli(["status"])
