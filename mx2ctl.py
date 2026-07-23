@@ -131,7 +131,8 @@ def cmd_test(args: argparse.Namespace) -> None:
     payload = {
         "smtp": smtp_payload,
         "publicKey": "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327",
-        "features": ["HPKE", "Sealed-Sender"]
+        "features": ["HPKE", "Sealed-Sender"],
+        "signatureValid": not args.spoof
     }
 
     res = _request_api("/api/translate", payload)
@@ -139,6 +140,8 @@ def cmd_test(args: argparse.Namespace) -> None:
     print("\033[92m[+] Daemon Response Received!\033[0m")
     print(f"Status       : \033[97m{res.get('status')}\033[0m")
     print(f"Trust Grade  : \033[97m{res.get('grade')}\033[0m")
+    if res.get("messageId"):
+        print(f"Message ID   : \033[97m{res.get('messageId')}\033[0m")
     print(f"Reason       : {res.get('reason')}")
     print("-" * 50)
     print("Translated Envelope Payload:")
@@ -181,6 +184,7 @@ def main() -> None:
     test_parser.add_argument("--recipient", help="Mock recipient email (default: bob@example.com)")
     test_parser.add_argument("--subject", help="Mock email subject")
     test_parser.add_argument("--body", help="Mock email body content")
+    test_parser.add_argument("--spoof", action="store_true", help="Simulate a spoofed/unverified signature (Grade E)")
 
     # If executed with no arguments, print help and exit
     if len(sys.argv) == 1:

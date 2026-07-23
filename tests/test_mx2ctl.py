@@ -84,6 +84,13 @@ class TestMX2ControlCLI(unittest.TestCase):
         self.assertIn("Daemon Response Received!", stdout)
         self.assertIn("Status       : JUNK", stdout)
 
+        # Test Spoofed Translation (Grade E)
+        code, stdout, stderr = self._run_cli(["test", "--subject", "Spoofed Mail", "--spoof"])
+        self.assertEqual(code, 0)
+        self.assertIn("Daemon Response Received!", stdout)
+        self.assertIn("Trust Grade  : E", stdout)
+        self.assertIn("Status       : QUARANTINE", stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
