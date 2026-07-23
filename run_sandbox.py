@@ -58,9 +58,7 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
 
     try:
         translated_envelope_str = BilingualGateway.translate_smtp_to_mx2(
-            test_mime_content,
-            recipient_public_key=did_recipient,
-            negotiated_features=negotiated["features"]
+            test_mime_content, recipient_public_key=did_recipient, negotiated_features=negotiated["features"]
         )
         envelope = json.loads(translated_envelope_str)
         print("\nSerialized Envelope (recipient resolves via DID):")
@@ -79,9 +77,7 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
     print("[*] Attempting decryption with incorrect private key...")
     try:
         decrypted_fail_str = BilingualGateway.decrypt_payload(
-            envelope["encryptedPayload"],
-            envelope["ephemeralPublicKey"],
-            wrong_private_key
+            envelope["encryptedPayload"], envelope["ephemeralPublicKey"], wrong_private_key
         )
         decrypted_fail = json.loads(decrypted_fail_str)
         print(f"[!] Decryption succeeded unexpectedly? Content: {decrypted_fail}")
@@ -92,9 +88,7 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
     print("\n[*] Attempting decryption with correct private key...")
     try:
         decrypted_success_str = BilingualGateway.decrypt_payload(
-            envelope["encryptedPayload"],
-            envelope["ephemeralPublicKey"],
-            mock_private_key
+            envelope["encryptedPayload"], envelope["ephemeralPublicKey"], mock_private_key
         )
         decrypted_success = json.loads(decrypted_success_str)
         print("[+] Decryption succeeded!")
@@ -127,7 +121,7 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
         "vouchedDomain": "untrusted-startup.net",
         "voucherDomain": "trusted.nl",
         "expires": str(time.time() + 3600),
-        "signature": f"sig_trusted.nl_untrusted-startup.net_{voucher_pubkey[:6]}"
+        "signature": f"sig_trusted.nl_untrusted-startup.net_{voucher_pubkey[:6]}",
     }
 
     scenarios = [
@@ -136,36 +130,36 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
             "sender": "notifications@github.com",
             "domain": "github.com",
             "vouch": None,
-            "sig_valid": True
+            "sig_valid": True,
         },
         {
             "name": "Scenario 2: Vouched Startup Domain (Grade B)",
             "sender": "ceo@untrusted-startup.net",
             "domain": "untrusted-startup.net",
             "vouch": vouch_token,
-            "sig_valid": True
+            "sig_valid": True,
         },
         {
             "name": "Scenario 3: Social Graph Contact (Grade C)",
             "sender": "friend@collaborator.com",
             "domain": "collaborator.com",
             "vouch": None,
-            "sig_valid": True
+            "sig_valid": True,
         },
         {
             "name": "Scenario 4: Validated Unknown Domain (Grade D)",
             "sender": "newsletter@marketing-bot.com",
             "domain": "marketing-bot.com",
             "vouch": None,
-            "sig_valid": True
+            "sig_valid": True,
         },
         {
             "name": "Scenario 5: Spoofed Domain Identity (Grade E)",
             "sender": "billing@github.com",
             "domain": "github.com",
             "vouch": None,
-            "sig_valid": False
-        }
+            "sig_valid": False,
+        },
     ]
 
     for sc in scenarios:
@@ -195,10 +189,8 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
             "code": "ERR_EMPTY_PAYLOAD",
             "message": "De e-mailinhoud is leeg of kon niet correct worden gelezen. Controleer je SMTP-invoer.",
             "type": "validation",
-            "details": {
-                "timestamp": "2026-07-16T12:00:00Z"
-            }
-        }
+            "details": {"timestamp": "2026-07-16T12:00:00Z"},
+        },
     }
     print(json.dumps(error_payload, indent=2))
 

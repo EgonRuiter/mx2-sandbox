@@ -35,12 +35,7 @@ class TestMX2WebServer(unittest.TestCase):
         """Helper to post JSON data to the daemon."""
         url = f"{self.base_url}{path}"
         req_data = json.dumps(data).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=req_data,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
+        req = urllib.request.Request(url, data=req_data, headers={"Content-Type": "application/json"}, method="POST")
         try:
             with urllib.request.urlopen(req) as resp:
                 body = resp.read().decode("utf-8")
@@ -78,15 +73,12 @@ class TestMX2WebServer(unittest.TestCase):
     def test_translate_api(self) -> None:
         """Tests translating SMTP MIME messages over the REST API."""
         smtp_payload = (
-            "From: alice@example.com\n"
-            "To: bob@example.com\n"
-            "Subject: REST Test\n\n"
-            "Testing translation over HTTP."
+            "From: alice@example.com\nTo: bob@example.com\nSubject: REST Test\n\nTesting translation over HTTP."
         )
         payload = {
             "smtp": smtp_payload,
             "publicKey": "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327",
-            "features": ["HPKE", "Sealed-Sender"]
+            "features": ["HPKE", "Sealed-Sender"],
         }
         code, data = self._post("/api/translate", payload)
         self.assertEqual(code, 200)
@@ -100,22 +92,16 @@ class TestMX2WebServer(unittest.TestCase):
         """Tests HPKE payload decryption via the REST API."""
         # 1. Translate message to get encrypted envelope
         smtp_payload = (
-            "From: alice@example.com\n"
-            "To: bob@example.com\n"
-            "Subject: Decrypt Test\n\n"
-            "Testing decryption over HTTP."
+            "From: alice@example.com\nTo: bob@example.com\nSubject: Decrypt Test\n\nTesting decryption over HTTP."
         )
-        translate_payload = {
-            "smtp": smtp_payload,
-            "publicKey": "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327"
-        }
+        translate_payload = {"smtp": smtp_payload, "publicKey": "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327"}
         _, tr_data = self._post("/api/translate", translate_payload)
 
         # 2. Call decryption endpoint
         decrypt_payload = {
             "encryptedPayload": tr_data["payload"]["encryptedPayload"],
             "ephemeralPublicKey": tr_data["payload"]["ephemeralPublicKey"],
-            "privateKey": "mock-private-key-12345"
+            "privateKey": "mock-private-key-12345",
         }
         code, data = self._post("/api/decrypt", decrypt_payload)
         self.assertEqual(code, 200)
@@ -124,10 +110,7 @@ class TestMX2WebServer(unittest.TestCase):
 
     def test_negotiate_api(self) -> None:
         """Tests version and capability negotiation over the REST API."""
-        payload = {
-            "clientVersion": "1.0.0",
-            "clientFeatures": ["HPKE", "Trust-Routing"]
-        }
+        payload = {"clientVersion": "1.0.0", "clientFeatures": ["HPKE", "Trust-Routing"]}
         code, data = self._post("/api/negotiate", payload)
         self.assertEqual(code, 200)
         self.assertTrue(data["success"])

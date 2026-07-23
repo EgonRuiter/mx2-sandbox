@@ -21,12 +21,7 @@ def _request_api(endpoint: str, payload: dict[str, Any] = None) -> dict[str, Any
     url = f"{MX2_URL}{endpoint}"
     data = json.dumps(payload or {}).encode("utf-8")
 
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST"
-    )
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
 
     try:
         with urllib.request.urlopen(req) as res:
@@ -45,10 +40,9 @@ def _request_api(endpoint: str, payload: dict[str, Any] = None) -> dict[str, Any
 
 def cmd_status(args: argparse.Namespace) -> None:
     """Inspects daemon status."""
-    res = _request_api("/api/negotiate", {
-        "clientVersion": "1.0.0",
-        "clientFeatures": ["HPKE", "Sealed-Sender", "Trust-Routing"]
-    })
+    res = _request_api(
+        "/api/negotiate", {"clientVersion": "1.0.0", "clientFeatures": ["HPKE", "Sealed-Sender", "Trust-Routing"]}
+    )
 
     print("\033[96m=" * 50)
     print(" MX2 GATEWAY DAEMON STATUS ".center(50, "="))
@@ -120,19 +114,13 @@ def cmd_test(args: argparse.Namespace) -> None:
     subject = args.subject or "MX2 Live Connection Test"
     body = args.body or "This is an automated test message sent via mx2ctl CLI."
 
-    smtp_payload = (
-        f"From: {sender}\n"
-        f"To: {recipient}\n"
-        f"Subject: {subject}\n"
-        "Content-Type: text/plain\n\n"
-        f"{body}"
-    )
+    smtp_payload = f"From: {sender}\nTo: {recipient}\nSubject: {subject}\nContent-Type: text/plain\n\n{body}"
 
     payload = {
         "smtp": smtp_payload,
         "publicKey": "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327",
         "features": ["HPKE", "Sealed-Sender"],
-        "signatureValid": not args.spoof
+        "signatureValid": not args.spoof,
     }
 
     res = _request_api("/api/translate", payload)
@@ -150,10 +138,7 @@ def cmd_test(args: argparse.Namespace) -> None:
 
 def main() -> None:
     """Main CLI parser entrypoint."""
-    parser = argparse.ArgumentParser(
-        description="MX2 Administration Utility (mx2ctl)",
-        prog="mx2ctl"
-    )
+    parser = argparse.ArgumentParser(description="MX2 Administration Utility (mx2ctl)", prog="mx2ctl")
 
     subparsers = parser.add_subparsers(dest="command", required=True, title="subcommands")
 
@@ -162,17 +147,8 @@ def main() -> None:
 
     # queue [list / approve / reject]
     queue_parser = subparsers.add_parser("queue", help="Manage quarantined Grade E messages")
-    queue_parser.add_argument(
-        "queue_action",
-        choices=["list", "approve", "reject"],
-        help="Queue command sub-action"
-    )
-    queue_parser.add_argument(
-        "msg_id",
-        nargs="?",
-        default=None,
-        help="Quarantined message ID to release or delete"
-    )
+    queue_parser.add_argument("queue_action", choices=["list", "approve", "reject"], help="Queue command sub-action")
+    queue_parser.add_argument("msg_id", nargs="?", default=None, help="Quarantined message ID to release or delete")
 
     # resolve [did]
     resolve_parser = subparsers.add_parser("resolve", help="Cryptographically verify a DID or domain TXT key")
@@ -193,12 +169,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    commands = {
-        "status": cmd_status,
-        "queue": cmd_queue,
-        "resolve": cmd_resolve,
-        "test": cmd_test
-    }
+    commands = {"status": cmd_status, "queue": cmd_queue, "resolve": cmd_resolve, "test": cmd_test}
 
     commands[args.command](args)
 

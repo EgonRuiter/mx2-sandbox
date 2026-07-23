@@ -52,9 +52,7 @@ class TestBilingualGateway(unittest.TestCase):
 
         # Decrypt using the correct private key (must succeed)
         decrypted_str = BilingualGateway.decrypt_payload(
-            envelope["encryptedPayload"],
-            envelope["ephemeralPublicKey"],
-            self.recipient_privkey
+            envelope["encryptedPayload"], envelope["ephemeralPublicKey"], self.recipient_privkey
         )
         payload = json.loads(decrypted_str)
         self.assertEqual(payload["content"]["subject"], "HPKE Test")
@@ -79,9 +77,7 @@ class TestBilingualGateway(unittest.TestCase):
 
         # Decrypt using the private key mapping
         decrypted_str = BilingualGateway.decrypt_payload(
-            envelope["encryptedPayload"],
-            envelope["ephemeralPublicKey"],
-            "mock-private-key-12345"
+            envelope["encryptedPayload"], envelope["ephemeralPublicKey"], "mock-private-key-12345"
         )
         payload = json.loads(decrypted_str)
         self.assertEqual(payload["sender"], "did:mx2:senderPubKeyHex")
@@ -92,7 +88,7 @@ class TestBilingualGateway(unittest.TestCase):
         envelope = {
             "recipient": "bob@example.com",
             "encryptedPayload": "someencryptedblob",
-            "ephemeralPublicKey": "someephemeralkey"
+            "ephemeralPublicKey": "someephemeralkey",
         }
 
         receipt = BilingualGateway.generate_delivery_receipt(envelope, self.recipient_privkey)

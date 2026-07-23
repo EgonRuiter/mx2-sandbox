@@ -19,10 +19,9 @@ class MX2AntiSpamEngine:
         whitelisted_senders (set): Sender domains/identities manually approved.
         contacts_database (dict): Hashed/mock social contact directory.
     """
+
     # Established high-reputation domain names
-    REPUTABLE_DOMAINS: set[str] = {
-        "github.com", "google.com", "utrecht-uni.nl", "trusted.nl", "trusted.com"
-    }
+    REPUTABLE_DOMAINS: set[str] = {"github.com", "google.com", "utrecht-uni.nl", "trusted.nl", "trusted.com"}
 
     def __init__(self, quota_limit: int = 100) -> None:
         """Initializes the trust engine with default settings.
@@ -113,7 +112,7 @@ class MX2AntiSpamEngine:
         recipient: str,
         vouch_token: dict[str, Any] = None,
         voucher_pubkey: str = "",
-        signature_valid: bool = True
+        signature_valid: bool = True,
     ) -> dict[str, Any]:
         """Evaluates sender context and computes the Automated Trust Grade.
 
@@ -137,7 +136,7 @@ class MX2AntiSpamEngine:
             return {
                 "grade": "E",
                 "destination": "Quarantine",
-                "reason": "Authenticatiefout: handtekening van afzender komt niet overeen met DNS/DID-sleutel."
+                "reason": "Authenticatiefout: handtekening van afzender komt niet overeen met DNS/DID-sleutel.",
             }
 
         # Grade A: Reputable / Whitelisted Domain -> Inbox
@@ -145,14 +144,14 @@ class MX2AntiSpamEngine:
             return {
                 "grade": "A",
                 "destination": "Inbox",
-                "reason": "Zender staat expliciet op de whitelist van de ontvanger."
+                "reason": "Zender staat expliciet op de whitelist van de ontvanger.",
             }
 
         if sender_domain_clean in self.REPUTABLE_DOMAINS:
             return {
                 "grade": "A",
                 "destination": "Inbox",
-                "reason": "Gevestigde domeinreputatie via DNSSEC/DID-verificatie."
+                "reason": "Gevestigde domeinreputatie via DNSSEC/DID-verificatie.",
             }
 
         # Grade B: Web of Trust Vouched -> Inbox
@@ -163,7 +162,7 @@ class MX2AntiSpamEngine:
                     return {
                         "grade": "B",
                         "destination": "Inbox",
-                        "reason": f"Nieuw domein succesvol geverifieerd via Vouching Token van '{voucher_domain}'."
+                        "reason": f"Nieuw domein succesvol geverifieerd via Vouching Token van '{voucher_domain}'.",
                     }
 
         # Grade C: Shared Social Graph contact -> Inbox
@@ -172,14 +171,14 @@ class MX2AntiSpamEngine:
                 return {
                     "grade": "C",
                     "destination": "Inbox",
-                    "reason": "Gemeenschappelijk contact of gedeelde connectie gevonden in sociaal netwerk."
+                    "reason": "Gemeenschappelijk contact of gedeelde connectie gevonden in sociaal netwerk.",
                 }
 
         # Grade D: Unknown Sender -> Junk (Auto-delivered, no user interruption)
         return {
             "grade": "D",
             "destination": "Junk",
-            "reason": "Onbekende afzender met geldige cryptografische handtekening, maar zonder WoT-garantie."
+            "reason": "Onbekende afzender met geldige cryptografische handtekening, maar zonder WoT-garantie.",
         }
 
     def quarantine_message(self, message_id: str, sender: str, subject: str, envelope: dict) -> None:
@@ -195,13 +194,15 @@ class MX2AntiSpamEngine:
         if any(msg["messageId"] == message_id for msg in self.holding_queue):
             return
 
-        self.holding_queue.append({
-            "messageId": message_id,
-            "sender": sender,
-            "subject": subject,
-            "envelope": envelope,
-            "timestamp": time.time()
-        })
+        self.holding_queue.append(
+            {
+                "messageId": message_id,
+                "sender": sender,
+                "subject": subject,
+                "envelope": envelope,
+                "timestamp": time.time(),
+            }
+        )
 
     def approve_quarantined_sender(self, message_id: str) -> tuple[bool, dict[str, Any]]:
         """Approves a quarantined message, whitelisting its sender identity.

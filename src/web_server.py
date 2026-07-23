@@ -45,10 +45,9 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
         if path == "/metrics":
             self._handle_metrics()
         elif path in ("/", ""):
-            self._send_json({
-                "status": "alive",
-                "message": "MX2 Headless Gateway Daemon running. Administer using mx2ctl."
-            }, 200)
+            self._send_json(
+                {"status": "alive", "message": "MX2 Headless Gateway Daemon running. Administer using mx2ctl."}, 200
+            )
         elif path == "/health":
             self._send_json({"status": "healthy"}, 200)
         else:
@@ -77,7 +76,7 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
             "/api/queue/approve": self._handle_queue_approve,
             "/api/queue/reject": self._handle_queue_reject,
             "/api/cas/upload": self._handle_cas_upload,
-            "/api/cas/download": self._handle_cas_download
+            "/api/cas/download": self._handle_cas_download,
         }
 
         if path in endpoints:
@@ -108,10 +107,8 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                 "code": code,
                 "message": message,
                 "type": err_type,
-                "details": {
-                    "timestamp": datetime.now(timezone.utc).isoformat() + "Z"
-                }
-            }
+                "details": {"timestamp": datetime.now(timezone.utc).isoformat() + "Z"},
+            },
         }
         log_event("WARNING", "Daemon-API", f"API Error [{code}]: {message}")
         self._send_json(error_payload, status_code)
@@ -128,7 +125,7 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                 "",
                 "# HELP mx2_quarantine_count Current number of emails held in the quarantine queue.",
                 "# TYPE mx2_quarantine_count gauge",
-                f"mx2_quarantine_count {quarantine_len}"
+                f"mx2_quarantine_count {quarantine_len}",
             ]
 
             response_bytes = "\n".join(metrics_lines).encode("utf-8")
@@ -156,7 +153,7 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                     "ERR_EMPTY_PAYLOAD",
                     "De e-mailinhoud is leeg of kon niet correct worden gelezen. Controleer je SMTP-invoer.",
                     "validation",
-                    400
+                    400,
                 )
                 return
 
@@ -187,14 +184,12 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                     "ERR_RATE_LIMIT_EXCEEDED",
                     f"Transmissie geweigerd: het verzendquota voor '{sender_domain}' is overschreden.",
                     "security",
-                    429
+                    429,
                 )
                 return
 
             # Translate message
-            translated_envelope_str = BilingualGateway.translate_smtp_to_mx2(
-                raw_smtp, pubkey, features, vouch_token
-            )
+            translated_envelope_str = BilingualGateway.translate_smtp_to_mx2(raw_smtp, pubkey, features, vouch_token)
             translated_dict = json.loads(translated_envelope_str)
 
             # Record sending
@@ -213,36 +208,40 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                 log_event(
                     "INFO",
                     "Daemon-Gateway",
-                    f"Quarantined message {msg_id} from {sender_addr} due to Grade E trust routing."
+                    f"Quarantined message {msg_id} from {sender_addr} due to Grade E trust routing.",
                 )
-                self._send_json({
-                    "success": True,
-                    "status": "QUARANTINE",
-                    "grade": trust_result["grade"],
-                    "reason": trust_result["reason"],
-                    "messageId": msg_id,
-                    "payload": translated_dict
-                })
+                self._send_json(
+                    {
+                        "success": True,
+                        "status": "QUARANTINE",
+                        "grade": trust_result["grade"],
+                        "reason": trust_result["reason"],
+                        "messageId": msg_id,
+                        "payload": translated_dict,
+                    }
+                )
                 return
 
             log_event(
                 "INFO",
                 "Daemon-Gateway",
-                f"Translated message successfully (Grade {trust_result['grade']} -> {trust_result['destination']})."
+                f"Translated message successfully (Grade {trust_result['grade']} -> {trust_result['destination']}).",
             )
-            self._send_json({
-                "success": True,
-                "status": trust_result["destination"].upper(),
-                "grade": trust_result["grade"],
-                "reason": trust_result["reason"],
-                "payload": translated_dict
-            })
+            self._send_json(
+                {
+                    "success": True,
+                    "status": trust_result["destination"].upper(),
+                    "grade": trust_result["grade"],
+                    "reason": trust_result["reason"],
+                    "payload": translated_dict,
+                }
+            )
         except Exception as err:
             self._send_error(
                 "ERR_TRANSLATION_FAILED",
                 f"De Bilingual Gateway kon het e-mailbericht niet vertalen naar MX2: {str(err)}",
                 "server",
-                500
+                500,
             )
 
     def _handle_decrypt(self) -> None:
@@ -260,23 +259,20 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                     "ERR_DECRYPTION_PARAMETERS_MISSING",
                     "Kan bericht niet ontsleutelen: ontbrekende E2EE parameters in envelop.",
                     "security",
-                    400
+                    400,
                 )
                 return
 
             decrypted_str = BilingualGateway.decrypt_payload(encrypted_b64, ephemeral_public, private_key)
             decrypted_dict = json.loads(decrypted_str)
 
-            self._send_json({
-                "success": True,
-                "payload": decrypted_dict
-            })
+            self._send_json({"success": True, "payload": decrypted_dict})
         except Exception:
             self._send_error(
                 "ERR_DECRYPTION_FAILED",
                 "Decryptie mislukt. De afgeleide sessiesleutel komt niet overeen met de envelop-sleutel.",
                 "security",
-                403
+                403,
             )
 
     def _handle_receipt_generate(self) -> None:
@@ -293,22 +289,19 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                     "ERR_RECEIPT_MISSING_ENVELOPE",
                     "Geen e-mailenvelop ontvangen om een afleverbewijs voor te genereren.",
                     "validation",
-                    400
+                    400,
                 )
                 return
 
             receipt = BilingualGateway.generate_delivery_receipt(envelope, privkey)
 
-            self._send_json({
-                "success": True,
-                "receipt": receipt
-            })
+            self._send_json({"success": True, "receipt": receipt})
         except Exception as err:
             self._send_error(
                 "ERR_RECEIPT_GENERATION_FAILED",
                 f"Fout bij het genereren van het ontvangstbewijs: {str(err)}",
                 "server",
-                500
+                500,
             )
 
     def _handle_negotiate(self) -> None:
@@ -321,20 +314,15 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
             client_feats = payload.get("clientFeatures", [])
             server_ver = payload.get("serverVersion", "2.0.0")
 
-            negotiated = BilingualGateway.negotiate_capabilities(
-                client_ver, client_feats, server_ver
-            )
+            negotiated = BilingualGateway.negotiate_capabilities(client_ver, client_feats, server_ver)
 
-            self._send_json({
-                "success": True,
-                "negotiated": negotiated
-            })
+            self._send_json({"success": True, "negotiated": negotiated})
         except Exception as err:
             self._send_error(
                 "ERR_NEGOTIATION_FAILED",
                 f"Sleutel/functie-onderhandeling tussen client en server is mislukt: {str(err)}",
                 "routing",
-                500
+                500,
             )
 
     def _handle_vouch_verify(self) -> None:
@@ -348,16 +336,10 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
 
             is_valid = self.anti_spam.verify_vouch_token(token, pubkey)
 
-            self._send_json({
-                "success": True,
-                "valid": is_valid
-            })
+            self._send_json({"success": True, "valid": is_valid})
         except Exception as err:
             self._send_error(
-                "ERR_VOUCH_VERIFICATION_FAILED",
-                f"Fout bij valideren van vouching token: {str(err)}",
-                "security",
-                500
+                "ERR_VOUCH_VERIFICATION_FAILED", f"Fout bij valideren van vouching token: {str(err)}", "security", 500
             )
 
     def _handle_trust_evaluate(self) -> None:
@@ -377,24 +359,15 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                 sender, sender_domain, recipient, vouch_token, voucher_pubkey, signature_valid
             )
 
-            self._send_json({
-                "success": True,
-                "trustResult": trust_result
-            })
+            self._send_json({"success": True, "trustResult": trust_result})
         except Exception as err:
             self._send_error(
-                "ERR_TRUST_EVALUATION_FAILED",
-                f"Fout bij berekenen van trust grade: {str(err)}",
-                "server",
-                500
+                "ERR_TRUST_EVALUATION_FAILED", f"Fout bij berekenen van trust grade: {str(err)}", "server", 500
             )
 
     def _handle_queue_list(self) -> None:
         """Lists all quarantined messages."""
-        self._send_json({
-            "success": True,
-            "queue": self.anti_spam.holding_queue
-        })
+        self._send_json({"success": True, "queue": self.anti_spam.holding_queue})
 
     def _handle_queue_approve(self) -> None:
         """Approves a quarantined message, whitelisting the sender."""
@@ -407,25 +380,22 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
 
             if success:
                 log_event("INFO", "Daemon-Queue", f"Released message {msg_id} and whitelisted identity.")
-                self._send_json({
-                    "success": True,
-                    "message": "Sender whitelisted and message released.",
-                    "releasedMessage": approved_msg
-                })
+                self._send_json(
+                    {
+                        "success": True,
+                        "message": "Sender whitelisted and message released.",
+                        "releasedMessage": approved_msg,
+                    }
+                )
             else:
                 self._send_error(
                     "ERR_QUEUE_MESSAGE_NOT_FOUND",
                     "Bericht niet gevonden in quarantine-holding queue.",
                     "validation",
-                    404
+                    404,
                 )
         except Exception as err:
-            self._send_error(
-                "ERR_QUEUE_APPROVE_FAILED",
-                f"Fout bij whitelisten: {str(err)}",
-                "server",
-                500
-            )
+            self._send_error("ERR_QUEUE_APPROVE_FAILED", f"Fout bij whitelisten: {str(err)}", "server", 500)
 
     def _handle_queue_reject(self) -> None:
         """Rejects and discards a quarantined message."""
@@ -438,24 +408,16 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
 
             if success:
                 log_event("INFO", "Daemon-Queue", f"Discarded quarantined message {msg_id}.")
-                self._send_json({
-                    "success": True,
-                    "message": "Quarantined email discarded."
-                })
+                self._send_json({"success": True, "message": "Quarantined email discarded."})
             else:
                 self._send_error(
                     "ERR_QUEUE_MESSAGE_NOT_FOUND",
                     "Bericht niet gevonden in quarantine-holding queue.",
                     "validation",
-                    404
+                    404,
                 )
         except Exception as err:
-            self._send_error(
-                "ERR_QUEUE_REJECT_FAILED",
-                f"Fout bij verwerpen: {str(err)}",
-                "server",
-                500
-            )
+            self._send_error("ERR_QUEUE_REJECT_FAILED", f"Fout bij verwerpen: {str(err)}", "server", 500)
 
     def _handle_cas_upload(self) -> None:
         """Uploads and deduplicates file content to the CAS Engine."""
@@ -467,17 +429,10 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
             sha256_hash, cas_uri = self.cas_engine.write(content)
             log_event("INFO", "Daemon-CAS", f"Stored attachment under CAS URI {cas_uri}.")
 
-            self._send_json({
-                "success": True,
-                "sha256": sha256_hash,
-                "uri": cas_uri
-            })
+            self._send_json({"success": True, "sha256": sha256_hash, "uri": cas_uri})
         except Exception as err:
             self._send_error(
-                "ERR_CAS_UPLOAD_FAILED",
-                f"Kan bijlage niet uploaden naar CAS-opslag: {str(err)}",
-                "server",
-                500
+                "ERR_CAS_UPLOAD_FAILED", f"Kan bijlage niet uploaden naar CAS-opslag: {str(err)}", "server", 500
             )
 
     def _handle_cas_download(self) -> None:
@@ -489,16 +444,13 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
 
             content_bytes = self.cas_engine.read(sha256_hash)
 
-            self._send_json({
-                "success": True,
-                "content": content_bytes.decode("utf-8", errors="ignore")
-            })
+            self._send_json({"success": True, "content": content_bytes.decode("utf-8", errors="ignore")})
         except Exception as err:
             self._send_error(
                 "ERR_CAS_DOWNLOAD_FAILED",
                 f"Hash niet gevonden of kon niet worden gelezen: {str(err)}",
                 "validation",
-                404
+                404,
             )
 
 
@@ -533,4 +485,3 @@ def run_server() -> None:
 
 if __name__ == "__main__":
     run_server()
-

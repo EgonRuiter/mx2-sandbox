@@ -35,9 +35,9 @@ class TestMX2ControlCLI(unittest.TestCase):
         res = subprocess.run(cmd, capture_output=True, text=True, env=env)
 
         # Strip ANSI escape sequences (colors) from output
-        ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
-        clean_stdout = ansi_escape.sub('', res.stdout)
-        clean_stderr = ansi_escape.sub('', res.stderr)
+        ansi_escape = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        clean_stdout = ansi_escape.sub("", res.stdout)
+        clean_stderr = ansi_escape.sub("", res.stderr)
 
         return res.returncode, clean_stdout, clean_stderr
 

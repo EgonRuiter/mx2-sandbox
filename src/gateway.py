@@ -27,7 +27,7 @@ class BilingualGateway:
         raw_mime_data: str,
         recipient_public_key: str = "",
         negotiated_features: Optional[list[str]] = None,
-        vouching_token: Optional[dict[str, Any]] = None
+        vouching_token: Optional[dict[str, Any]] = None,
     ) -> str:
         """Parses SMTP MIME and encrypts it into a Sealed Sender MX2 envelope.
 
@@ -70,15 +70,12 @@ class BilingualGateway:
                 "protocolVersion": "2.0.0",
                 "messageId": f"msg_{uuid.uuid4().hex[:12]}_{now_utc.year}",
                 "timestamp": now_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "negotiatedFeatures": negotiated_features or ["HPKE", "Sealed-Sender", "Web-of-Trust"]
+                "negotiatedFeatures": negotiated_features or ["HPKE", "Sealed-Sender", "Web-of-Trust"],
             },
             "sender": sender_addr,
             "senderSignature": "unverified-legacy-smtp-sig",
-            "content": {
-                "subject": msg.get("Subject", "").strip(),
-                "blocks": []
-            },
-            "attachments": []
+            "content": {"subject": msg.get("Subject", "").strip(), "blocks": []},
+            "attachments": [],
         }
 
         # Handle CC/BCC (will reside inside the E2EE encrypted payload)
@@ -88,10 +85,7 @@ class BilingualGateway:
             if recipients_header:
                 addresses = [addr.strip() for addr in recipients_header.split(",") if addr.strip()]
                 for addr in addresses:
-                    recipients_list.append({
-                        "address": addr,
-                        "type": header_field.lower()
-                    })
+                    recipients_list.append({"address": addr, "type": header_field.lower()})
         inner_payload["recipients"] = recipients_list
 
         body_parts: list[dict[str, str]] = []
@@ -122,10 +116,9 @@ class BilingualGateway:
                     html_payload = part.get_payload(decode=True)
                     if html_payload:
                         raw_text = html_payload.decode("utf-8", errors="ignore")
-                        html_parts.append({
-                            "type": "text/plain",
-                            "body": f"[Legacy HTML Content Stripped] {raw_text[:500]}"
-                        })
+                        html_parts.append(
+                            {"type": "text/plain", "body": f"[Legacy HTML Content Stripped] {raw_text[:500]}"}
+                        )
             body_parts.extend(html_parts)
 
         inner_payload["content"]["blocks"] = body_parts
@@ -133,15 +126,13 @@ class BilingualGateway:
 
         # 3. Encrypt the inner payload (End-to-End Encryption with HPKE X25519)
         serialized_inner = json.dumps(inner_payload)
-        encrypted_data, ephemeral_key = BilingualGateway.encrypt_payload(
-            serialized_inner, resolved_pubkey
-        )
+        encrypted_data, ephemeral_key = BilingualGateway.encrypt_payload(serialized_inner, resolved_pubkey)
 
         # 4. Form the outer Sealed Sender Envelope
         outer_envelope = {
             "recipient": recipient_addr,
             "encryptedPayload": encrypted_data,
-            "ephemeralPublicKey": ephemeral_key
+            "ephemeralPublicKey": ephemeral_key,
         }
         if vouching_token:
             outer_envelope["vouchingToken"] = vouching_token
@@ -232,23 +223,16 @@ class BilingualGateway:
 
         timestamp = datetime.now(timezone.utc).isoformat() + "Z"
 
-        signature = base64.b64encode(
-            f"sig_{recipient_private_key[:8]}_{sha256_hash[:10]}".encode()
-        ).decode()
+        signature = base64.b64encode(f"sig_{recipient_private_key[:8]}_{sha256_hash[:10]}".encode()).decode()
 
-        return {
-            "messageId": message_id,
-            "sha256Digest": sha256_hash,
-            "timestamp": timestamp,
-            "signature": signature
-        }
+        return {"messageId": message_id, "sha256Digest": sha256_hash, "timestamp": timestamp, "signature": signature}
 
     @staticmethod
     def negotiate_capabilities(
         client_version: str,
         client_features: list[str],
         server_version: str = "2.0.0",
-        server_features: Optional[list[str]] = None
+        server_features: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         """Negotiates compatible SemVer and feature sets between client and server.
 
@@ -275,10 +259,7 @@ class BilingualGateway:
         # Intersect features
         negotiated_features = list(set(client_features) & set(server_features))
 
-        return {
-            "protocolVersion": negotiated_version,
-            "features": negotiated_features
-        }
+        return {"protocolVersion": negotiated_version, "features": negotiated_features}
 
     @staticmethod
     def _process_text_part(part: Message, content_type: str, body_parts: list[dict[str, str]]) -> None:
@@ -292,10 +273,7 @@ class BilingualGateway:
         if content_type in ["text/plain", "text/markdown"]:
             payload_bytes = part.get_payload(decode=True)
             if payload_bytes:
-                body_parts.append({
-                    "type": content_type,
-                    "body": payload_bytes.decode("utf-8", errors="ignore")
-                })
+                body_parts.append({"type": content_type, "body": payload_bytes.decode("utf-8", errors="ignore")})
 
     @staticmethod
     def _process_attachment(part: Message, content_type: str, attachments: list[dict[str, Any]]) -> None:
@@ -313,11 +291,13 @@ class BilingualGateway:
         cas_engine = MX2CASEngine()
         sha256_hash, cas_uri = cas_engine.write(payload_bytes)
 
-        attachments.append({
-            "id": f"att_{uuid.uuid4().hex[:8]}",
-            "filename": filename,
-            "contentType": content_type,
-            "size": len(payload_bytes),
-            "sha256": sha256_hash,
-            "retrievalUrl": cas_uri
-        })
+        attachments.append(
+            {
+                "id": f"att_{uuid.uuid4().hex[:8]}",
+                "filename": filename,
+                "contentType": content_type,
+                "size": len(payload_bytes),
+                "sha256": sha256_hash,
+                "retrievalUrl": cas_uri,
+            }
+        )

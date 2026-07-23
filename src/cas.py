@@ -20,11 +20,7 @@ class MX2CASEngine:
         """
         if not base_dir:
             # Default to <sandbox>/storage/cas
-            base_dir = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                "storage",
-                "cas"
-            )
+            base_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage", "cas")
         self.storage_dir = base_dir
         os.makedirs(self.storage_dir, exist_ok=True)
 

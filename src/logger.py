@@ -39,7 +39,7 @@ def log_event(level: str, component: str, message: str, details: Optional[dict[s
         "timestamp": datetime.now(timezone.utc).isoformat() + "Z",
         "level": level.upper().strip(),
         "component": component.strip(),
-        "message": message.strip()
+        "message": message.strip(),
     }
     if details:
         log_line["details"] = details

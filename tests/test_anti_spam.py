@@ -20,7 +20,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
             "vouchedDomain": "untrusted.net",
             "voucherDomain": "trusted.nl",
             "expires": str(time.time() + 3600),
-            "signature": f"sig_trusted.nl_untrusted.net_{self.voucher_pubkey[:6]}"
+            "signature": f"sig_trusted.nl_untrusted.net_{self.voucher_pubkey[:6]}",
         }
         self.assertTrue(self.engine.verify_vouch_token(token, self.voucher_pubkey))
 
@@ -30,7 +30,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
             "vouchedDomain": "untrusted.net",
             "voucherDomain": "trusted.nl",
             "expires": str(time.time() + 3600),
-            "signature": "sig_bad_signature_1234"
+            "signature": "sig_bad_signature_1234",
         }
         self.assertFalse(self.engine.verify_vouch_token(token, self.voucher_pubkey))
 
@@ -39,7 +39,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
             "vouchedDomain": "untrusted.net",
             "voucherDomain": "trusted.nl",
             "expires": str(time.time() - 100),
-            "signature": f"sig_trusted.nl_untrusted.net_{self.voucher_pubkey[:6]}"
+            "signature": f"sig_trusted.nl_untrusted.net_{self.voucher_pubkey[:6]}",
         }
         self.assertFalse(self.engine.verify_vouch_token(expired_token, self.voucher_pubkey))
 
@@ -48,9 +48,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
         self.engine.whitelisted_senders.add("trusted-partner.com")
 
         result = self.engine.evaluate_trust_grade(
-            sender="alice@trusted-partner.com",
-            sender_domain="trusted-partner.com",
-            recipient="bob@example.com"
+            sender="alice@trusted-partner.com", sender_domain="trusted-partner.com", recipient="bob@example.com"
         )
         self.assertEqual(result["grade"], "A")
         self.assertEqual(result["destination"], "Inbox")
@@ -61,7 +59,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
             "vouchedDomain": "untrusted.net",
             "voucherDomain": "trusted.nl",
             "expires": str(time.time() + 3600),
-            "signature": f"sig_trusted.nl_untrusted.net_{self.voucher_pubkey[:6]}"
+            "signature": f"sig_trusted.nl_untrusted.net_{self.voucher_pubkey[:6]}",
         }
 
         # trusted.nl is a reputable domain in REPUTABLE_DOMAINS
@@ -70,7 +68,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
             sender_domain="untrusted.net",
             recipient="bob@example.com",
             vouch_token=token,
-            voucher_pubkey=self.voucher_pubkey
+            voucher_pubkey=self.voucher_pubkey,
         )
         self.assertEqual(result["grade"], "B")
         self.assertEqual(result["destination"], "Inbox")
@@ -81,7 +79,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
             sender="stranger@unknown.com",
             sender_domain="unknown.com",
             recipient="bob@example.com",
-            signature_valid=True
+            signature_valid=True,
         )
         self.assertEqual(result["grade"], "D")
         self.assertEqual(result["destination"], "Junk")
@@ -89,10 +87,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
     def test_sender_status_quarantines_spoofed(self) -> None:
         """Messages with failed signature verification are routed to Quarantine Grade E."""
         result = self.engine.evaluate_trust_grade(
-            sender="billing@github.com",
-            sender_domain="github.com",
-            recipient="bob@example.com",
-            signature_valid=False
+            sender="billing@github.com", sender_domain="github.com", recipient="bob@example.com", signature_valid=False
         )
         self.assertEqual(result["grade"], "E")
         self.assertEqual(result["destination"], "Quarantine")
