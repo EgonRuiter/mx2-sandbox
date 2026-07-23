@@ -1,0 +1,118 @@
+Network Working Group                                          E. Ruiter
+Internet-Draft                              Utrecht University Department
+Intended Status: Standards Track             of Information and Computing
+Published: July 2026                                            Sciences
+
+
+                       The MX2 Protocol Standard
+                 draft-ruiter-mx2-protocol-specification
+
+Abstract
+
+   This document outlines the architectural specifications of MX2, a
+   next-generation federated messaging protocol designed to completely
+   supplant SMTP, IMAP, and POP3. MX2 replaces raw line-command socket
+   states with structured CBOR-serialized JSON-like envelopes
+   multiplexed over HTTP/3 (QUIC) on port 443. The protocol integrates
+   mandatory End-to-End Encryption (E2EE) with Perfect Forward Secrecy,
+   Sealed Sender metadata privacy, cryptographic delivery receipts, and
+   an automated multi-tiered green spam routing trust engine.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+1.  Introduction
+
+   The current global email stack relies heavily on SMTP (RFC 5321) and
+   IMAP (RFC 3501). These protocols contain design vulnerabilities:
+   1) No intrinsic transport-layer identity authentication.
+   2) Inefficiencies over mobile networks due to head-of-line TCP blocking.
+   3) Extreme payload overhead resulting from Base64 binary injection.
+   4) Complete exposure of metadata (routing, sender IP, client user-agent).
+   5) Lack of forward secrecy and verifiable delivery guarantees.
+
+   MX2 unifies sending and retrieval into a single stateless REST-like
+   API layer over HTTP/3, introducing green trust delegation networks,
+   uncompromisable E2EE, and domain metadata isolation.
+
+2.  Transport Framework & Feature Negotiation
+
+   An MX2 connection MUST default to HTTP/3 over QUIC. Clients request
+   and post information to the "/mx2/v2/submit" and "/mx2/v2/sync"
+   endpoints.
+
+   2.1. Feature & Version Negotiation
+   To ensure backward compatibility and future-proofing, every connection
+   begins with a capabilities handshake. The client and server exchange
+   SemVer version identifiers and feature arrays (e.g. `HPKE`, `Sealed-Sender`,
+   `Trust-Routing`). The connection degrades gracefully to the highest
+   mutually supported protocol version.
+
+   2.2. Serialization
+   Payloads MUST be transmitted using Concise Binary Object Representation
+   (CBOR) matching the JSON schema layouts. This reduces payload sizes by
+   20-40% and parser computational overhead by up to 10x.
+
+3.  Cryptographic Trust, E2EE, & Sealed Sender
+
+   Every MX2 domain and mailbox user MUST publish an active public key
+   used for Ed25519 signatures and X25519 key exchanges. Keys are
+   advertised securely via DNSSEC or WebFinger queries.
+
+   3.1. Hybrid Public Key Encryption (HPKE)
+   All message contents, subjects, and attachment references MUST be
+   encrypted on the sender's client using a symmetric key negotiated via
+   ECDH (X25519) and authenticated via AES-GCM (256-bit). To guarantee
+   Perfect Forward Secrecy (PFS), subsequent client interactions update
+   symmetric keys using a HKDF-based key derivation ratchet.
+
+   3.2. Sealed Sender Envelope
+   The outer transmission envelope exposes only the recipient's address.
+   The sender's identity (`sender` email and cryptographic signature) is
+   packed inside the encrypted payload. Intermediate routing relays see
+   only the recipient destination, preventing metadata tracking.
+
+   3.3. Decentralized Identifiers (DIDs)
+   MX2 natively supports Decentrale Identiteiten (DIDs) formatted as
+   `did:mx2:[publicKeyHex]`. This allows consumers to utilize E2EE and
+   authentic identity verification without renting a domain or configuring
+   complex DNSSEC records.
+
+4.  Automated Federated Trust Routing Model
+
+   MX2 employs a 100% environmentally friendly spam prevention model.
+   It completely avoids Proof-of-Work (PoW) CPU computations, preventing
+   battery drain on mobile devices and wasting electrical grid energy. Rather
+   than bothering users with manual whitelist approvals for every new sender,
+   the protocol routes emails automatically to the Inbox or Junk folder based on
+   five Trust Grades (A-E):
+
+   4.1. Trust Grades Definition
+   - **Grade A (Trusted Domain - Instant Inbox)**: Signed cryptographically by
+     a domain with a positive trust rating (DNSSEC validated) or a sender
+     already present in the recipient's contacts.
+   - **Grade B (WoT Vouched - Auto-Inbox)**: Senders from new/small domains
+     carrying a valid Vouching Token signed by a Grade A domain.
+   - **Grade C (Shared Network - Auto-Inbox)**: Senders verified via shared contact
+     graphs (transitive trust).
+   - **Grade D (Unknown Sender - Auto-Junk)**: New domains with zero reputation,
+     no vouching tokens, and no shared contacts. These are routed directly
+     to the recipient's **Junk Folder** using lightweight greylisting, ensuring
+     zero user interruption.
+   - **Grade E (Unverified Signature - Quarantine)**: Messages failing basic
+     cryptographic signatures (potential spoofing). These are quarantined
+     in the **Holding Queue** for manual safety review.
+
+5.  Delivery Receipts & Human-Readable Errors
+
+   5.1. Cryptographic Delivery Receipts (Non-Repudiation)
+   Upon successful verification and decryption of an envelope, the recipient
+   server MUST return a signed JSON receipt containing the envelope hash and the
+   recipient domain's signature.
+
+   5.2. Human-Readable Error Codes
+   Legacy SMTP numeric codes (e.g. `554 5.7.1`) are deprecated. MX2 server
+   responses return structured JSON error payloads containing localized, human-
+   readable descriptions, error categories, and diagnostics.

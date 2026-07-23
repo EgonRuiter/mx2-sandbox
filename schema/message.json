@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MX2EnvelopePayloadV8",
+  "description": "Outer transport envelope for MX2 messages, implementing HPKE, DIDs, Web of Trust vouching tokens, collaborative thread identifiers, and CAS storage references.",
+  "type": "object",
+  "required": ["recipient", "encryptedPayload", "ephemeralPublicKey"],
+  "properties": {
+    "recipient": { 
+      "type": "string", 
+      "description": "Recipient identifier, either a standard email format or a DID (e.g. did:mx2:abc123xyz)."
+    },
+    "encryptedPayload": { 
+      "type": "string", 
+      "description": "Base64-encoded encrypted string of the inner payload (containing sender, signature, subject, blocks, negotiatedFeatures, threadId, parentBlockId, and attachments)."
+    },
+    "ephemeralPublicKey": { 
+      "type": "string", 
+      "description": "Base64-encoded X25519 ephemeral public key for E2EE key exchange."
+    },
+    "vouchingToken": {
+      "type": "object",
+      "required": ["vouchedDomain", "voucherDomain", "expires", "signature"],
+      "properties": {
+        "vouchedDomain": { "type": "string" },
+        "voucherDomain": { "type": "string" },
+        "expires": { "type": "string", "format": "date-time" },
+        "signature": { "type": "string", "description": "Base64-encoded Ed25519 signature by the voucher domain public key." }
+      }
+    }
+  },
+  "definitions": {
+    "MX2ErrorPayload": {
+      "type": "object",
+      "required": ["success", "error"],
+      "properties": {
+        "success": { "type": "boolean", "const": false },
+        "error": {
+          "type": "object",
+          "required": ["code", "message", "type"],
+          "properties": {
+            "code": { "type": "string", "pattern": "^ERR_[A-Z_]{3,20}$" },
+            "message": { "type": "string", "description": "Human-readable localized description of the error." },
+            "type": { "type": "string", "enum": ["validation", "routing", "security", "server"] },
+            "details": { "type": "object" }
+          }
+        }
+      }
+    }
+  }
+}

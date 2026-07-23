@@ -1,0 +1,21 @@
+; --- BIND9 Zone Configuration for example.com ---
+$TTL 3600
+@       IN      SOA     ns1.example.com. admin.example.com. (
+                        2026071501 ; Serial
+                        7200       ; Refresh
+                        3600       ; Retry
+                        1209600    ; Expire
+                        3600 )     ; Minimum
+
+; Name Servers
+        IN      NS      ns1.example.com.
+
+; Point MX2 service to HTTPS port 443 on the mail cluster node
+_mx2._tcp.example.com.   IN   SRV   10 10 443 mx2.example.com.
+
+; MX2 Cryptographic Key (Ed25519 Public Identity Key for sender signature validation)
+_mx2key.example.com.     IN   TXT   "v=MX2; k=ed25519; p=MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327"
+
+; Backup SPF/DMARC records for legacy fallback handling
+@                        IN   TXT   "v=spf1 mx -all"
+_dmarc.example.com.      IN   TXT   "v=DMARC1; p=reject; adkim=s; aspf=s;"
