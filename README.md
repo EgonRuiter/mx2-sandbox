@@ -63,6 +63,9 @@ python mx2ctl.py queue list
 
 # Cryptographically resolve a DID key
 python mx2ctl.py resolve did:mx2:MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327
+
+# Test the bilingual gateway translation with a mock email
+python mx2ctl.py test --sender alice@example.com --recipient bob@example.com --subject "CLI Test" --body "Hello MX2!"
 ```
 
 ---
