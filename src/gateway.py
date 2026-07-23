@@ -5,16 +5,17 @@ supporting HPKE message encryption, cryptographic delivery receipts,
 Decentralized Identifiers (DIDs), and capability negotiations.
 """
 
+import base64
 import email
-from email.message import Message
-from email.policy import default
 import hashlib
 import json
-import base64
-import uuid
 import re
+import uuid
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Tuple, Optional
+from email.message import Message
+from email.policy import default
+from typing import Any, Optional
+
 from src.cas import MX2CASEngine
 
 
@@ -23,10 +24,10 @@ class BilingualGateway:
 
     @staticmethod
     def translate_smtp_to_mx2(
-        raw_mime_data: str, 
-        recipient_public_key: str = "", 
-        negotiated_features: Optional[List[str]] = None,
-        vouching_token: Optional[Dict[str, Any]] = None
+        raw_mime_data: str,
+        recipient_public_key: str = "",
+        negotiated_features: Optional[list[str]] = None,
+        vouching_token: Optional[dict[str, Any]] = None
     ) -> str:
         """Parses SMTP MIME and encrypts it into a Sealed Sender MX2 envelope.
 
@@ -47,7 +48,7 @@ class BilingualGateway:
             match_to = re.search(r"(?i)^To:\s*(did:mx2:[a-zA-Z0-9+/=]+)", raw_mime_data, re.MULTILINE)
             if match_to:
                 recipient_addr = match_to.group(1).strip()
-        
+
         # If recipient is a DID (e.g. did:mx2:publicKeyHex), extract public key
         resolved_pubkey = recipient_public_key
         if recipient_addr.startswith("did:mx2:"):
@@ -64,7 +65,7 @@ class BilingualGateway:
 
         # 2. Build the inner (private) payload
         now_utc = datetime.now(timezone.utc)
-        inner_payload: Dict[str, Any] = {
+        inner_payload: dict[str, Any] = {
             "meta": {
                 "protocolVersion": "2.0.0",
                 "messageId": f"msg_{uuid.uuid4().hex[:12]}_{now_utc.year}",
@@ -93,8 +94,8 @@ class BilingualGateway:
                     })
         inner_payload["recipients"] = recipients_list
 
-        body_parts: List[Dict[str, str]] = []
-        attachments: List[Dict[str, Any]] = []
+        body_parts: list[dict[str, str]] = []
+        attachments: list[dict[str, Any]] = []
 
         if msg.is_multipart():
             for part in msg.walk():
@@ -115,7 +116,7 @@ class BilingualGateway:
 
         # Fallback to HTML body translation if no plain text/markdown is present
         if not body_parts:
-            html_parts: List[Dict[str, str]] = []
+            html_parts: list[dict[str, str]] = []
             for part in msg.walk() if msg.is_multipart() else [msg]:
                 if part.get_content_type() == "text/html":
                     html_payload = part.get_payload(decode=True)
@@ -148,7 +149,7 @@ class BilingualGateway:
         return json.dumps(outer_envelope, indent=2)
 
     @staticmethod
-    def encrypt_payload(plaintext: str, public_key: str) -> Tuple[str, str]:
+    def encrypt_payload(plaintext: str, public_key: str) -> tuple[str, str]:
         """Simulates ECDH key exchange and HPKE symmetric message encryption.
 
         Args:
@@ -230,7 +231,7 @@ class BilingualGateway:
             message_id = f"receipt_{sha256_hash[:12]}"
 
         timestamp = datetime.now(timezone.utc).isoformat() + "Z"
-        
+
         signature = base64.b64encode(
             f"sig_{recipient_private_key[:8]}_{sha256_hash[:10]}".encode()
         ).decode()
@@ -244,11 +245,11 @@ class BilingualGateway:
 
     @staticmethod
     def negotiate_capabilities(
-        client_version: str, 
-        client_features: List[str], 
-        server_version: str = "2.0.0", 
-        server_features: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        client_version: str,
+        client_features: list[str],
+        server_version: str = "2.0.0",
+        server_features: Optional[list[str]] = None
+    ) -> dict[str, Any]:
         """Negotiates compatible SemVer and feature sets between client and server.
 
         Args:
@@ -280,7 +281,7 @@ class BilingualGateway:
         }
 
     @staticmethod
-    def _process_text_part(part: Message, content_type: str, body_parts: List[Dict[str, str]]) -> None:
+    def _process_text_part(part: Message, content_type: str, body_parts: list[dict[str, str]]) -> None:
         """Processes email text/plain or text/markdown body sections.
 
         Args:
@@ -297,7 +298,7 @@ class BilingualGateway:
                 })
 
     @staticmethod
-    def _process_attachment(part: Message, content_type: str, attachments: List[Dict[str, Any]]) -> None:
+    def _process_attachment(part: Message, content_type: str, attachments: list[dict[str, Any]]) -> None:
         """Extracts attachment metadata and hashes data payloads, writing to the CAS store.
 
         Args:

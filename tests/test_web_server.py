@@ -1,11 +1,12 @@
 """Unit tests for the MX2 Headless REST Daemon HTTP Server."""
 
 import json
-import unittest
-import urllib.request
-import urllib.parse
-from http.server import HTTPServer
 import threading
+import unittest
+import urllib.parse
+import urllib.request
+from http.server import HTTPServer
+
 from src.web_server import MX2SandboxHTTPHandler
 
 
@@ -18,7 +19,7 @@ class TestMX2WebServer(unittest.TestCase):
         cls.server = HTTPServer(("127.0.0.1", 0), MX2SandboxHTTPHandler)
         cls.host, cls.port = cls.server.server_address
         cls.base_url = f"http://{cls.host}:{cls.port}"
-        
+
         # Start server in a background daemon thread
         cls.server_thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.server_thread.start()
@@ -35,8 +36,8 @@ class TestMX2WebServer(unittest.TestCase):
         url = f"{self.base_url}{path}"
         req_data = json.dumps(data).encode("utf-8")
         req = urllib.request.Request(
-            url, 
-            data=req_data, 
+            url,
+            data=req_data,
             headers={"Content-Type": "application/json"},
             method="POST"
         )
@@ -109,7 +110,7 @@ class TestMX2WebServer(unittest.TestCase):
             "publicKey": "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327"
         }
         _, tr_data = self._post("/api/translate", translate_payload)
-        
+
         # 2. Call decryption endpoint
         decrypt_payload = {
             "encryptedPayload": tr_data["payload"]["encryptedPayload"],

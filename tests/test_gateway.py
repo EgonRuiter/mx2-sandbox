@@ -2,6 +2,7 @@
 
 import json
 import unittest
+
 from src.gateway import BilingualGateway
 
 
@@ -29,7 +30,7 @@ class TestBilingualGateway(unittest.TestCase):
         self.assertEqual(envelope["recipient"], "bob@example.com")
         self.assertIn("encryptedPayload", envelope)
         self.assertIn("ephemeralPublicKey", envelope)
-        
+
         # Ensure private content is NOT visible in the outer envelope
         self.assertNotIn("alice@example.com", translated_envelope_str)
         self.assertNotIn("Confidential Project", translated_envelope_str)

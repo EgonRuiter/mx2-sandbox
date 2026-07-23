@@ -5,31 +5,30 @@ endpoints for envelope translations, HPKE decrypts, capabilities negotiation,
 and anti-spam administration.
 """
 
-import sys
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import configparser
 import json
 import os
+import sys
 import urllib.parse
-import uuid
-import configparser
 from datetime import datetime, timezone
-from typing import Tuple, Dict, Any, List, Optional
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Any
 
 # Allow importing 'src' package components when run directly as a script
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.anti_spam import MX2AntiSpamEngine
-from src.gateway import BilingualGateway
 from src.cas import MX2CASEngine
-from src.logger import setup_logger, log_event
+from src.gateway import BilingualGateway
+from src.logger import log_event, setup_logger
 
 
 class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
     """Hardened REST API and Prometheus telemetries handler for the MX2 Daemon."""
-    
+
     anti_spam = MX2AntiSpamEngine()
     cas_engine = MX2CASEngine()
-    
+
     # Telemetry metrics counters
     api_connections_total = 0
 
@@ -197,8 +196,12 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
 
                 msg_id = translated_dict.get("encryptedPayload", "")[:12]
                 self.anti_spam.quarantine_message(msg_id, sender_addr, subject, translated_dict)
-                
-                log_event("INFO", "Daemon-Gateway", f"Quarantined message {msg_id} from {sender_addr} due to Grade E trust routing.")
+
+                log_event(
+                    "INFO",
+                    "Daemon-Gateway",
+                    f"Quarantined message {msg_id} from {sender_addr} due to Grade E trust routing."
+                )
                 self._send_json({
                     "success": True,
                     "status": "QUARANTINE",
@@ -209,7 +212,11 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                 })
                 return
 
-            log_event("INFO", "Daemon-Gateway", f"Translated message successfully (Grade {trust_result['grade']} -> {trust_result['destination']}).")
+            log_event(
+                "INFO",
+                "Daemon-Gateway",
+                f"Translated message successfully (Grade {trust_result['grade']} -> {trust_result['destination']})."
+            )
             self._send_json({
                 "success": True,
                 "status": trust_result["destination"].upper(),
@@ -443,7 +450,7 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
             body = self._read_post_body()
             payload = json.loads(body)
             content = payload.get("content", "")
-            
+
             sha256_hash, cas_uri = self.cas_engine.write(content)
             log_event("INFO", "Daemon-CAS", f"Stored attachment under CAS URI {cas_uri}.")
 
@@ -466,9 +473,9 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
             body = self._read_post_body()
             payload = json.loads(body)
             sha256_hash = payload.get("sha256", "")
-            
+
             content_bytes = self.cas_engine.read(sha256_hash)
-            
+
             self._send_json({
                 "success": True,
                 "content": content_bytes.decode("utf-8", errors="ignore")
@@ -503,7 +510,7 @@ def run_server() -> None:
     server_address = (host, port)
     httpd = HTTPServer(server_address, MX2SandboxHTTPHandler)
     log_event("INFO", "Daemon-Init", f"API Server listening on http://{host}:{port}")
-    
+
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -513,4 +520,4 @@ def run_server() -> None:
 
 if __name__ == "__main__":
     run_server()
-    
+

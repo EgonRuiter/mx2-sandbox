@@ -6,7 +6,7 @@ WoT vouches, shared social graphs, and signature verification.
 """
 
 import time
-from typing import Dict, Any, List, Tuple, Set
+from typing import Any
 
 
 class MX2AntiSpamEngine:
@@ -20,7 +20,7 @@ class MX2AntiSpamEngine:
         contacts_database (dict): Hashed/mock social contact directory.
     """
     # Established high-reputation domain names
-    REPUTABLE_DOMAINS: Set[str] = {
+    REPUTABLE_DOMAINS: set[str] = {
         "github.com", "google.com", "utrecht-uni.nl", "trusted.nl", "trusted.com"
     }
 
@@ -32,12 +32,12 @@ class MX2AntiSpamEngine:
         """
         self.quota_limit = quota_limit
         # Key: (sender_domain, recipient_domain) -> List of timestamps (floats)
-        self.quota_history: Dict[Tuple[str, str], List[float]] = {}
-        self.holding_queue: List[Dict[str, Any]] = []
-        self.whitelisted_senders: Set[str] = set()
-        
+        self.quota_history: dict[tuple[str, str], list[float]] = {}
+        self.holding_queue: list[dict[str, Any]] = []
+        self.whitelisted_senders: set[str] = set()
+
         # Mock Social Graph contacts for Grade C evaluation
-        self.contacts_database: Dict[str, Set[str]] = {
+        self.contacts_database: dict[str, set[str]] = {
             "bob@example.com": {"friend@collaborator.com", "partner@startup.nl"}
         }
 
@@ -70,14 +70,14 @@ class MX2AntiSpamEngine:
 
         current_time = time.time()
         one_hour_ago = current_time - 3600.0
-        
+
         # Efficient list comprehension to filter out timestamps older than 1 hour
         history = [t for t in self.quota_history[key] if t > one_hour_ago]
         self.quota_history[key] = history
 
         return len(history)
 
-    def verify_vouch_token(self, token: Dict[str, Any], voucher_public_key: str) -> bool:
+    def verify_vouch_token(self, token: dict[str, Any], voucher_public_key: str) -> bool:
         """Verifies a Web of Trust vouching token signature.
 
         Args:
@@ -111,10 +111,10 @@ class MX2AntiSpamEngine:
         sender: str,
         sender_domain: str,
         recipient: str,
-        vouch_token: Dict[str, Any] = None,
+        vouch_token: dict[str, Any] = None,
         voucher_pubkey: str = "",
         signature_valid: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Evaluates sender context and computes the Automated Trust Grade.
 
         Args:
@@ -147,7 +147,7 @@ class MX2AntiSpamEngine:
                 "destination": "Inbox",
                 "reason": "Zender staat expliciet op de whitelist van de ontvanger."
             }
-        
+
         if sender_domain_clean in self.REPUTABLE_DOMAINS:
             return {
                 "grade": "A",
@@ -203,7 +203,7 @@ class MX2AntiSpamEngine:
             "timestamp": time.time()
         })
 
-    def approve_quarantined_sender(self, message_id: str) -> Tuple[bool, Dict[str, Any]]:
+    def approve_quarantined_sender(self, message_id: str) -> tuple[bool, dict[str, Any]]:
         """Approves a quarantined message, whitelisting its sender identity.
 
         Args:

@@ -5,9 +5,10 @@ Demonstrates SemVer capabilities negotiation, E2EE HPKE message encryption
 and decryption, DIDs, delivery receipts, and Automated Trust Routing (Grades A-E).
 """
 
+import json
 import sys
 import time
-import json
+
 from src.anti_spam import MX2AntiSpamEngine
 from src.gateway import BilingualGateway
 
@@ -25,7 +26,7 @@ def run_demo() -> None:
 
     # --- Section 1: Capabilities & Version Negotiation ---
     print_banner("1. Version & Capabilities Negotiation Handshake")
-    
+
     client_version = "1.2.0"
     client_features = ["HPKE", "Sealed-Sender", "Trust-Routing"]
     server_version = "2.1.0"
@@ -37,7 +38,7 @@ def run_demo() -> None:
     negotiated = BilingualGateway.negotiate_capabilities(
         client_version, client_features, server_version, server_features
     )
-    print(f"\nNegotiated result:")
+    print("\nNegotiated result:")
     print(f"-> Selected Version: {negotiated['protocolVersion']}")
     print(f"-> Enabled Features: {negotiated['features']}")
 
@@ -57,8 +58,8 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
 
     try:
         translated_envelope_str = BilingualGateway.translate_smtp_to_mx2(
-            test_mime_content, 
-            recipient_public_key=did_recipient, 
+            test_mime_content,
+            recipient_public_key=did_recipient,
             negotiated_features=negotiated["features"]
         )
         envelope = json.loads(translated_envelope_str)
@@ -70,7 +71,7 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
 
     # --- Section 3: HPKE Encryption & Decryption ---
     print_banner("3. HPKE Message Decryption")
-    
+
     mock_private_key = "mock-private-key-12345"
     wrong_private_key = "wrong-private-key-99999"
 
@@ -116,7 +117,7 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
 
     # --- Section 5: Automated Trust Routing ---
     print_banner("5. Automated Trust Routing (Grades A-E)")
-    
+
     engine = MX2AntiSpamEngine()
     recipient = "bob@example.com"
     voucher_pubkey = "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327"
@@ -177,7 +178,7 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
         print(f"    - Diagnostic: {result['reason']}")
 
         if result["destination"] == "Quarantine":
-            print(f"    [!] Placing unverified mail in Inbox Holding Queue...")
+            print("    [!] Placing unverified mail in Inbox Holding Queue...")
             engine.quarantine_message("q_msg_github_spoof", sc["sender"], "Update your credentials", {})
 
     print(f"\nActive Holding Queue Length (Grade E quarantine): {len(engine.holding_queue)}")
@@ -187,7 +188,7 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
     # --- Section 6: Structured Human-Readable JSON Errors ---
     print_banner("6. Structured Human-Readable JSON Errors")
     print("Simulating error response for an empty email submission...")
-    
+
     error_payload = {
         "success": False,
         "error": {

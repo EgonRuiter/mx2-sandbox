@@ -1,7 +1,8 @@
 """Unit tests for the MX2 Automated Trust Routing Spam Engine."""
 
-import unittest
 import time
+import unittest
+
 from src.anti_spam import MX2AntiSpamEngine
 
 
@@ -45,7 +46,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
     def test_sender_status_whitelisted_delivers_instantly(self) -> None:
         """Manually whitelisted sender domains bypass quarantine lists and land in Inbox."""
         self.engine.whitelisted_senders.add("trusted-partner.com")
-        
+
         result = self.engine.evaluate_trust_grade(
             sender="alice@trusted-partner.com",
             sender_domain="trusted-partner.com",
@@ -100,7 +101,7 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
         """Tests that quarantined Grade E items can be approved (whitelisted) or rejected."""
         envelope = {"recipient": "bob@example.com"}
         self.engine.quarantine_message("q_msg_123", "stranger@unknown.com", "Hello Partner", envelope)
-        
+
         self.assertEqual(len(self.engine.holding_queue), 1)
         self.assertEqual(self.engine.holding_queue[0]["subject"], "Hello Partner")
 

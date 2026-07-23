@@ -33,8 +33,10 @@ dev = [
 ]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py39"
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -45,10 +47,18 @@ select = [
 ]
 ignore = [
     "D100", # Missing docstring in public module (handled at package boundaries)
-    "D104"  # Missing docstring in public package
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package
+    "D107"  # Missing docstring in __init__
 ]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D"]
+"run_sandbox.py" = ["D"]
+
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.format]

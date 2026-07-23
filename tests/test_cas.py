@@ -1,9 +1,10 @@
 """Unit tests for the MX2 Content-Addressable Storage (CAS) engine."""
 
-import unittest
-import tempfile
-import shutil
 import os
+import shutil
+import tempfile
+import unittest
+
 from src.cas import MX2CASEngine
 
 
@@ -39,7 +40,7 @@ class TestMX2CASEngine(unittest.TestCase):
 
         # Hash matches
         self.assertEqual(sha256_1, sha256_2)
-        
+
         # Verify exactly one file exists in the directory
         files_list = os.listdir(self.test_dir)
         self.assertEqual(len(files_list), 1)

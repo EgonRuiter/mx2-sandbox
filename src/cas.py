@@ -4,9 +4,9 @@ Deduplicates attachments by saving them exactly once using their cryptographical
 secure SHA-256 hash.
 """
 
-import os
 import hashlib
-from typing import Tuple, Union
+import os
+from typing import Union
 
 
 class MX2CASEngine:
@@ -28,7 +28,7 @@ class MX2CASEngine:
         self.storage_dir = base_dir
         os.makedirs(self.storage_dir, exist_ok=True)
 
-    def write(self, data: Union[str, bytes]) -> Tuple[str, str]:
+    def write(self, data: Union[str, bytes]) -> tuple[str, str]:
         """Saves data to store, deduplicating if it already exists.
 
         Args:

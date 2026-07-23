@@ -5,29 +5,28 @@ Exposes Unix-style terminal subcommands to monitor daemon status, manage
 quarantine queues, and resolve DID keys.
 """
 
-import sys
 import argparse
-import urllib.request
-import urllib.error
 import json
-from typing import Dict, Any
-
+import sys
+import urllib.error
+import urllib.request
+from typing import Any
 
 DEFAULT_URL = "http://127.0.0.1:8000"
 
 
-def _request_api(endpoint: str, payload: Dict[str, Any] = None) -> Dict[str, Any]:
+def _request_api(endpoint: str, payload: dict[str, Any] = None) -> dict[str, Any]:
     """Helper to query the headless daemon REST API."""
     url = f"{DEFAULT_URL}{endpoint}"
     data = json.dumps(payload or {}).encode("utf-8")
-    
+
     req = urllib.request.Request(
-        url, 
-        data=data, 
+        url,
+        data=data,
         headers={"Content-Type": "application/json"},
         method="POST"
     )
-    
+
     try:
         with urllib.request.urlopen(req) as res:
             return json.loads(res.read().decode("utf-8"))
@@ -49,14 +48,14 @@ def cmd_status(args: argparse.Namespace) -> None:
         "clientVersion": "1.0.0",
         "clientFeatures": ["HPKE", "Sealed-Sender", "Trust-Routing"]
     })
-    
+
     print("=" * 50)
     print(" MX2 GATEWAY DAEMON STATUS ".center(50, "="))
     print("=" * 50)
     print("Daemon State : RUNNING")
     print(f"API Target   : {DEFAULT_URL}")
     print("-" * 50)
-    
+
     neg = res.get("negotiated", {})
     print(f"Negotiated Ver: v{neg.get('protocolVersion', 'unknown')}")
     print(f"Active Features: {', '.join(neg.get('features', []))}")
@@ -70,7 +69,7 @@ def cmd_queue(args: argparse.Namespace) -> None:
     if sub == "list":
         res = _request_api("/api/queue/list")
         queue = res.get("queue", [])
-        
+
         if not queue:
             print("[+] Inbox Holding Queue is empty. No quarantined items.")
             return
@@ -79,14 +78,14 @@ def cmd_queue(args: argparse.Namespace) -> None:
         print("-" * 80)
         for item in queue:
             print(f"{item['messageId']:<15} | {item['sender']:<30} | {item['subject']:<30}")
-            
+
     elif sub == "approve":
         if not args.msg_id:
             print("[-] Error: Approve subcommand requires a message ID.")
             sys.exit(1)
         _request_api("/api/queue/approve", {"messageId": args.msg_id})
-        print(f"[+] Success: Quarantined sender whitelisted. Message released.")
-        
+        print("[+] Success: Quarantined sender whitelisted. Message released.")
+
     elif sub == "reject":
         if not args.msg_id:
             print("[-] Error: Reject subcommand requires a message ID.")
@@ -125,14 +124,14 @@ def main() -> None:
     # queue [list / approve / reject]
     queue_parser = subparsers.add_parser("queue", help="Manage quarantined Grade E messages")
     queue_parser.add_argument(
-        "queue_action", 
-        choices=["list", "approve", "reject"], 
+        "queue_action",
+        choices=["list", "approve", "reject"],
         help="Queue command sub-action"
     )
     queue_parser.add_argument(
-        "msg_id", 
-        nargs="?", 
-        default=None, 
+        "msg_id",
+        nargs="?",
+        default=None,
         help="Quarantined message ID to release or delete"
     )
 
