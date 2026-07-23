@@ -1,5 +1,8 @@
 # MX2 (Mail eXchange 2.0) Local Sandbox
 
+[![MX2 Sandbox CI](https://github.com/EgonRuiter/mx2-sandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/EgonRuiter/mx2-sandbox/actions/workflows/ci.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Welcome to the **MX2** (Mail eXchange 2.0) local development sandbox. This repository contains the reference implementation package for the next-generation federated messaging protocol designed to replace SMTP, IMAP, and POP3. 
@@ -130,13 +133,33 @@ python -m unittest discover -s tests -p "test_*.py"
 
 ---
 
-## 📜 Contributing & Code Quality
+## 📜 Contributing & Developer Onboarding
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) to understand our coding standards:
-- Conform strictly to **PEP 8** style guidelines.
-- Write **Google-style docstrings** for all code blocks.
-- Keep the core libraries dependency-free.
-- Ensure unit tests are provided for all modifications.
+Contributions are welcome! We want to make it as easy as possible for developers to get started:
+
+### ⚡ 1-Step Local Developer Setup
+We provide automated scripts to set up a virtual environment, install dev dependencies (Ruff, Pre-commit), register git hooks, and run all validation tests:
+
+* **Windows (PowerShell)**:
+  ```powershell
+  ./setup.ps1
+  ```
+* **macOS / Linux (Bash)**:
+  ```bash
+  chmod +x setup.sh
+  ./setup.sh
+  ```
+
+### 🏷️ Good First Issues
+Check out our open issues labeled **[good first issue](https://github.com/EgonRuiter/mx2-sandbox/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)** on GitHub to start contributing!
+
+### 🗺️ Future Development Roadmap
+If you want to contribute but don't know where to start, here are some high-priority roadmap goals we are looking to build:
+1. **Dynamic CPU Hash Challenges**: Implement actual cryptographic Proof-of-Work verification for Grade D senders (using hashcash-style algorithms).
+2. **True HTTP/3 (QUIC) Transport**: Integrate a Python QUIC library (e.g. `aioquic`) to replace the basic HTTP/1.1 handler and match the MX2 specifications.
+3. **Automated BIND9 Zone Exports**: Write a utility to export resolved DID public keys directly into BIND9 or CoreDNS compatible zone records.
+
+Please review our **[CONTRIBUTING.md](CONTRIBUTING.md)** file for guidelines on coding standards, docstrings, and formatting.
 
 ---
 
