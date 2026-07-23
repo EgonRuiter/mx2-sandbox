@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  gateway:
+    build: .
+    container_name: mx2-gateway-daemon
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
+      - ./storage:/app/storage
+    restart: unless-stopped

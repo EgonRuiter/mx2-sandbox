@@ -47,9 +47,17 @@ python run_sandbox.py
 ```
 
 ### 2. Run the Headless Gateway Daemon
+
+**Option A: Native Python**
 Start the background REST gateway daemon:
 ```bash
 python src/web_server.py
+```
+
+**Option B: Docker Compose**
+Launch the gateway daemon inside a container with mapped persistent volumes:
+```bash
+docker compose up -d --build
 ```
 
 ### 3. Use the CLI Admin Utility (`mx2ctl`)
