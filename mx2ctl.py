@@ -2,7 +2,7 @@
 """MX2 Command-Line Administration Utility (mx2ctl).
 
 Exposes Unix-style terminal subcommands to monitor daemon status, manage
-quarantine queues, and resolve DID keys.
+quarantine queues, resolve DID keys, and test translations.
 """
 
 import argparse
@@ -33,12 +33,12 @@ def _request_api(endpoint: str, payload: dict[str, Any] = None) -> dict[str, Any
     except urllib.error.HTTPError as err:
         try:
             err_payload = json.loads(err.read().decode("utf-8"))
-            print(f"[-] Error [{err.code}]: {err_payload['error']['message']}")
+            print(f"\033[91m[-] Error [{err.code}]: {err_payload['error']['message']}\033[0m")
         except Exception:
-            print(f"[-] HTTP Error [{err.code}]: {err.reason}")
+            print(f"\033[91m[-] HTTP Error [{err.code}]: {err.reason}\033[0m")
         sys.exit(1)
     except urllib.error.URLError:
-        print(f"[-] Connection Error: Can't reach MX2 daemon at {DEFAULT_URL}. Is it running?")
+        print(f"\033[91m[-] Connection Error: Can't reach MX2 daemon at {DEFAULT_URL}. Is it running?\033[0m")
         sys.exit(1)
 
 
@@ -49,17 +49,17 @@ def cmd_status(args: argparse.Namespace) -> None:
         "clientFeatures": ["HPKE", "Sealed-Sender", "Trust-Routing"]
     })
 
-    print("=" * 50)
+    print("\033[96m=" * 50)
     print(" MX2 GATEWAY DAEMON STATUS ".center(50, "="))
-    print("=" * 50)
-    print("Daemon State : RUNNING")
+    print("=" * 50 + "\033[0m")
+    print("\033[92mDaemon State : RUNNING\033[0m")
     print(f"API Target   : {DEFAULT_URL}")
     print("-" * 50)
 
     neg = res.get("negotiated", {})
     print(f"Negotiated Ver: v{neg.get('protocolVersion', 'unknown')}")
     print(f"Active Features: {', '.join(neg.get('features', []))}")
-    print("=" * 50)
+    print("\033[96m=" * 50 + "\033[0m")
 
 
 def cmd_queue(args: argparse.Namespace) -> None:
@@ -71,7 +71,7 @@ def cmd_queue(args: argparse.Namespace) -> None:
         queue = res.get("queue", [])
 
         if not queue:
-            print("[+] Inbox Holding Queue is empty. No quarantined items.")
+            print("\033[92m[+] Inbox Holding Queue is empty. No quarantined items.\033[0m")
             return
 
         print(f"{'Message ID':<15} | {'Sender':<30} | {'Subject':<30}")
@@ -81,33 +81,67 @@ def cmd_queue(args: argparse.Namespace) -> None:
 
     elif sub == "approve":
         if not args.msg_id:
-            print("[-] Error: Approve subcommand requires a message ID.")
+            print("\033[91m[-] Error: Approve subcommand requires a message ID.\033[0m")
             sys.exit(1)
         _request_api("/api/queue/approve", {"messageId": args.msg_id})
-        print("[+] Success: Quarantined sender whitelisted. Message released.")
+        print(f"\033[92m[+] Success: Quarantined sender for message '{args.msg_id}' whitelisted and released.\033[0m")
 
     elif sub == "reject":
         if not args.msg_id:
-            print("[-] Error: Reject subcommand requires a message ID.")
+            print("\033[91m[-] Error: Reject subcommand requires a message ID.\033[0m")
             sys.exit(1)
         _request_api("/api/queue/reject", {"messageId": args.msg_id})
-        print(f"[+] Success: Quarantined message {args.msg_id} discarded.")
+        print(f"\033[92m[+] Success: Quarantined message {args.msg_id} discarded.\033[0m")
 
 
 def cmd_resolve(args: argparse.Namespace) -> None:
     """Resolves Decentralized Identifiers (DIDs) or domain txt keys."""
     did = args.identifier
-    print(f"[*] Resolving identifier: {did}...")
+    print(f"\033[93m[*] Resolving identifier: {did}...\033[0m")
 
     if did.startswith("did:mx2:"):
         pubkey = did.replace("did:mx2:", "")
-        print(f"[+] Resolved direct DID public key: {pubkey}")
+        print(f"\033[92m[+] Resolved direct DID public key: {pubkey}\033[0m")
     else:
-        print(f"[-] Querying SRV records for _mx2._tcp.{did}...")
+        print(f"\033[90m[-] Querying SRV records for _mx2._tcp.{did}...\033[0m")
         print(f"[+] Found SRV: Port 443 -> mx2.{did}")
-        print(f"[-] Querying TXT records for _mx2key.{did}...")
+        print(f"\033[90m[-] Querying TXT records for _mx2key.{did}...\033[0m")
         mock_key = "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327"
-        print(f"[+] Found TXT: v=MX2; k=ed25519; p={mock_key}")
+        print(f"\033[92m[+] Found TXT: v=MX2; k=ed25519; p={mock_key}\033[0m")
+
+
+def cmd_test(args: argparse.Namespace) -> None:
+    """Sends a mock SMTP MIME message to the daemon to test gateway translation."""
+    print("\033[93m[*] Dispatching mock SMTP email to gateway daemon...\033[0m")
+
+    sender = args.sender or "alice@example.com"
+    recipient = args.recipient or "bob@example.com"
+    subject = args.subject or "MX2 Live Connection Test"
+    body = args.body or "This is an automated test message sent via mx2ctl CLI."
+
+    smtp_payload = (
+        f"From: {sender}\n"
+        f"To: {recipient}\n"
+        f"Subject: {subject}\n"
+        "Content-Type: text/plain\n\n"
+        f"{body}"
+    )
+
+    payload = {
+        "smtp": smtp_payload,
+        "publicKey": "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327",
+        "features": ["HPKE", "Sealed-Sender"]
+    }
+
+    res = _request_api("/api/translate", payload)
+
+    print("\033[92m[+] Daemon Response Received!\033[0m")
+    print(f"Status       : \033[97m{res.get('status')}\033[0m")
+    print(f"Trust Grade  : \033[97m{res.get('grade')}\033[0m")
+    print(f"Reason       : {res.get('reason')}")
+    print("-" * 50)
+    print("Translated Envelope Payload:")
+    print(json.dumps(res.get("payload"), indent=2))
 
 
 def main() -> None:
@@ -116,7 +150,8 @@ def main() -> None:
         description="MX2 Administration Utility (mx2ctl)",
         prog="mx2ctl"
     )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    subparsers = parser.add_subparsers(dest="command", required=True, title="subcommands")
 
     # status
     subparsers.add_parser("status", help="Query gateway daemon state & SemVer capabilities")
@@ -139,12 +174,25 @@ def main() -> None:
     resolve_parser = subparsers.add_parser("resolve", help="Cryptographically verify a DID or domain TXT key")
     resolve_parser.add_argument("identifier", help="DID value (did:mx2:...) or domain name")
 
+    # test [options]
+    test_parser = subparsers.add_parser("test", help="Test gateway translation by sending a mock email")
+    test_parser.add_argument("--sender", help="Mock sender email (default: alice@example.com)")
+    test_parser.add_argument("--recipient", help="Mock recipient email (default: bob@example.com)")
+    test_parser.add_argument("--subject", help="Mock email subject")
+    test_parser.add_argument("--body", help="Mock email body content")
+
+    # If executed with no arguments, print help and exit
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+
     args = parser.parse_args()
 
     commands = {
         "status": cmd_status,
         "queue": cmd_queue,
-        "resolve": cmd_resolve
+        "resolve": cmd_resolve,
+        "test": cmd_test
     }
 
     commands[args.command](args)
