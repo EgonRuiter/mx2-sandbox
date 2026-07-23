@@ -1,9 +1,0 @@
-{"timestamp": "2026-07-17T16:01:45.093986+00:00Z", "level": "INFO", "component": "Daemon-Init", "message": "Initializing MX2 Gateway Server (Headless Mode)..."}
-{"timestamp": "2026-07-17T16:01:45.097505+00:00Z", "level": "INFO", "component": "SMTP-Proxy", "message": "SMTP Proxy listening on 127.0.0.1:10025"}
-{"timestamp": "2026-07-17T16:01:45.098351+00:00Z", "level": "INFO", "component": "IMAP-Proxy", "message": "IMAP Proxy listening on 127.0.0.1:10143"}
-{"timestamp": "2026-07-17T16:01:45.110630+00:00Z", "level": "INFO", "component": "Daemon-Init", "message": "API Server listening on http://127.0.0.1:8000"}
-{"timestamp": "2026-07-17T16:01:49.289886+00:00Z", "level": "INFO", "component": "Daemon-HTTP", "message": "\"POST /api/negotiate HTTP/1.1\" 200 -"}
-{"timestamp": "2026-07-17T16:01:51.810295+00:00Z", "level": "INFO", "component": "Daemon-HTTP", "message": "\"POST /api/cas/stats HTTP/1.1\" 200 -"}
-{"timestamp": "2026-07-17T16:04:36.773374+00:00Z", "level": "INFO", "component": "Daemon-Init", "message": "Initializing MX2 Gateway Server (Headless Mode)..."}
-{"timestamp": "2026-07-17T16:04:36.790518+00:00Z", "level": "INFO", "component": "Daemon-Init", "message": "API Server listening on http://127.0.0.1:8000"}
-{"timestamp": "2026-07-17T16:04:39.902706+00:00Z", "level": "INFO", "component": "Daemon-HTTP", "message": "\"POST /api/negotiate HTTP/1.1\" 200 -"}
