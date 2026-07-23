@@ -61,19 +61,62 @@ docker compose up -d --build
 ```
 
 ### 3. Use the CLI Admin Utility (`mx2ctl`)
-With the daemon running, open another terminal to administer the gateway:
+With the daemon running (locally or on Render/Docker), open a terminal to administer and test the gateway.
+
+#### Configure API Target (Optional)
+By default, `mx2ctl` targets `http://127.0.0.1:8000`. To point to a remote daemon (like Render):
+```bash
+# Windows PowerShell
+$env:MX2_URL="https://mx2-sandbox.onrender.com"
+
+# Linux / macOS
+export MX2_URL="https://mx2-sandbox.onrender.com"
+```
+
+#### Run Basic Administration Commands
 ```bash
 # Query gateway daemon status and negotiated SemVer capabilities
 python mx2ctl.py status
 
-# List quarantined Grade E spoofed messages
-python mx2ctl.py queue list
-
 # Cryptographically resolve a DID key
 python mx2ctl.py resolve did:mx2:MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327
+```
 
-# Test the bilingual gateway translation with a mock email
-python mx2ctl.py test --sender alice@example.com --recipient bob@example.com --subject "CLI Test" --body "Hello MX2!"
+#### 🧪 Testing Trust Grade Routing (Inbox vs. Junk vs. Quarantine)
+MX2 implements a 5-tiered Automated Trust Grading system (A-E) inside `src/anti_spam.py`. You can test these paths using special flags on the `test` command:
+
+##### 🟢 Grade A (Inbox) — Reputable Domains
+Emails from established domains (like `github.com` or `google.com`) are routed directly to the recipient's **Inbox**:
+```bash
+python mx2ctl.py test --sender notifications@github.com --subject "GitHub Alert"
+# Result: Status = INBOX, Trust Grade = A
+```
+
+##### 🟡 Grade D (Junk) — Unknown Senders
+Emails from unknown, un-vouched senders with valid cryptographic signatures go directly to **Junk**:
+```bash
+python mx2ctl.py test --sender newsletter@marketing.com --subject "Weekly Offer"
+# Result: Status = JUNK, Trust Grade = D
+```
+
+##### 🔴 Grade E (Quarantine) — Spoofed Identities
+Emails that fail cryptographic signature verification (such as domain spoofing attempts) are diverted to the **Quarantine Queue** on the gateway:
+```bash
+python mx2ctl.py test --sender billing@github.com --subject "Account Suspended" --spoof
+# Result: Status = QUARANTINE, Trust Grade = E
+```
+
+#### 📥 Resolving Quarantined Messages
+When a message goes to quarantine, it is held in the gateway inbox holding queue. You can list, approve, or discard it:
+```bash
+# 1. List all currently quarantined messages
+python mx2ctl.py queue list
+
+# 2. Approve a quarantined message (whitelists the sender and releases the mail to Inbox)
+python mx2ctl.py queue approve <message_id>
+
+# 3. Discard a quarantined message (deletes the mail from the holding queue)
+python mx2ctl.py queue reject <message_id>
 ```
 
 ---
