@@ -57,6 +57,15 @@ class TestMX2WebServer(unittest.TestCase):
             self.assertIn("mx2_api_connections_total", body)
             self.assertIn("mx2_quarantine_count", body)
 
+    def test_health_endpoint(self) -> None:
+        """Healthcheck for orchestrators (K8s/Docker) returns 200 + healthy JSON."""
+        url = f"{self.base_url}/health"
+        with urllib.request.urlopen(url) as resp:
+            self.assertEqual(resp.status, 200)
+            self.assertIn("application/json", resp.headers.get("Content-Type", ""))
+            data = json.loads(resp.read().decode("utf-8"))
+            self.assertEqual(data, {"status": "healthy"})
+
     def test_invalid_endpoint(self) -> None:
         """Tests that request to invalid endpoint returns 404."""
         code, data = self._post("/api/non-existent", {})
