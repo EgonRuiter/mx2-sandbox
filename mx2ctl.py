@@ -136,6 +136,39 @@ def cmd_test(args: argparse.Namespace) -> None:
     print(json.dumps(res.get("payload"), indent=2))
 
 
+def cmd_pow(args: argparse.Namespace) -> None:
+    """Solves or verifies a Proof-of-Work CPU challenge."""
+    import time
+
+    from src.anti_spam import MX2AntiSpamEngine
+
+    challenge = args.challenge or f"bob@example.com:alice@example.com:{int(time.time())}"
+    bits = args.bits
+    nonce_val = args.nonce
+
+    if args.solve or nonce_val is None:
+        print(f"\033[96m[*] Solving Proof-of-Work challenge ({bits} bits)...\033[0m")
+        print(f"    - Payload: {challenge}")
+        start = time.time()
+        calc_nonce = 0
+        while not MX2AntiSpamEngine.verify_proof_of_work(challenge, str(calc_nonce), difficulty_bits=bits):
+            calc_nonce += 1
+        elapsed = time.time() - start
+        nonce_val = str(calc_nonce)
+        print(f"\033[92m[+] Nonce found: {nonce_val} (took {elapsed:.4f}s)\033[0m")
+
+    res = _request_api("/api/pow/verify", {"challenge": challenge, "nonce": str(nonce_val), "difficultyBits": bits})
+
+    print("-" * 50)
+    valid = res.get("valid", False)
+    color = "\033[92m" if valid else "\033[91m"
+    print(f"PoW Status   : {color}{'VALID' if valid else 'INVALID'}\033[0m")
+    print(f"Difficulty   : {res.get('difficultyBits')} bits")
+    print(f"Challenge    : {res.get('challenge')}")
+    print(f"Nonce        : {res.get('nonce')}")
+    print("-" * 50)
+
+
 def main() -> None:
     """Main CLI parser entrypoint."""
     parser = argparse.ArgumentParser(description="MX2 Administration Utility (mx2ctl)", prog="mx2ctl")
@@ -162,6 +195,13 @@ def main() -> None:
     test_parser.add_argument("--body", help="Mock email body content")
     test_parser.add_argument("--spoof", action="store_true", help="Simulate a spoofed/unverified signature (Grade E)")
 
+    # pow [options]
+    pow_parser = subparsers.add_parser("pow", help="Solve or verify a Proof-of-Work anti-spam CPU challenge")
+    pow_parser.add_argument("--challenge", help="Proof-of-Work challenge string payload")
+    pow_parser.add_argument("--nonce", help="Nonce solution to verify against the daemon API")
+    pow_parser.add_argument("--bits", type=int, default=10, help="Difficulty bits (default: 10)")
+    pow_parser.add_argument("--solve", action="store_true", help="Solve the challenge locally before verifying")
+
     # If executed with no arguments, print help and exit
     if len(sys.argv) == 1:
         parser.print_help()
@@ -169,7 +209,13 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    commands = {"status": cmd_status, "queue": cmd_queue, "resolve": cmd_resolve, "test": cmd_test}
+    commands = {
+        "status": cmd_status,
+        "queue": cmd_queue,
+        "resolve": cmd_resolve,
+        "test": cmd_test,
+        "pow": cmd_pow,
+    }
 
     commands[args.command](args)
 

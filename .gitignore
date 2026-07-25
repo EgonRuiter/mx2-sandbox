@@ -30,3 +30,9 @@ Desktop.ini
 # Local MX2 Sandbox logs and file storage
 logs/
 storage/
+
+# Build and packaging artifacts
+*.egg-info/
+build/
+dist/
+*.egg

@@ -133,6 +133,21 @@ class TestMX2WebServer(unittest.TestCase):
         self.assertTrue(dl_data["success"])
         self.assertEqual(dl_data["content"], "Sample file data for CAS.")
 
+    def test_pow_verify_api(self) -> None:
+        """Tests Proof-of-Work challenge verification over the REST API."""
+        from src.anti_spam import MX2AntiSpamEngine
+
+        challenge = "bob@example.com:alice@example.com:1710000000"
+        nonce = 0
+        while not MX2AntiSpamEngine.verify_proof_of_work(challenge, str(nonce), difficulty_bits=10):
+            nonce += 1
+
+        payload = {"challenge": challenge, "nonce": str(nonce), "difficultyBits": 10}
+        code, data = self._post("/api/pow/verify", payload)
+        self.assertEqual(code, 200)
+        self.assertTrue(data["success"])
+        self.assertTrue(data["valid"])
+
 
 if __name__ == "__main__":
     unittest.main()

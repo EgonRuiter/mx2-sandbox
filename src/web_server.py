@@ -77,6 +77,7 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
             "/api/queue/reject": self._handle_queue_reject,
             "/api/cas/upload": self._handle_cas_upload,
             "/api/cas/download": self._handle_cas_download,
+            "/api/pow/verify": self._handle_pow_verify,
         }
 
         if path in endpoints:
@@ -451,6 +452,37 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                 f"Hash niet gevonden of kon niet worden gelezen: {str(err)}",
                 "validation",
                 404,
+            )
+
+    def _handle_pow_verify(self) -> None:
+        """Verifies a Proof-of-Work challenge nonce."""
+        try:
+            body = self._read_post_body()
+            payload = json.loads(body)
+
+            challenge = payload.get("challenge", "")
+            nonce = str(payload.get("nonce", ""))
+            bits = int(payload.get("difficultyBits", 10))
+
+            if not challenge or not nonce:
+                self._send_error(
+                    "ERR_POW_MISSING_PARAMETERS",
+                    "Kan Proof-of-Work niet verifiëren: 'challenge' of 'nonce' ontbreekt.",
+                    "validation",
+                    400,
+                )
+                return
+
+            valid = MX2AntiSpamEngine.verify_proof_of_work(challenge, nonce, bits)
+            self._send_json(
+                {"success": True, "valid": valid, "challenge": challenge, "nonce": nonce, "difficultyBits": bits}
+            )
+        except Exception as err:
+            self._send_error(
+                "ERR_POW_VERIFICATION_FAILED",
+                f"Proof-of-Work verificatie mislukt: {str(err)}",
+                "server",
+                500,
             )
 
 

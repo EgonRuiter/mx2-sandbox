@@ -91,6 +91,12 @@ class TestMX2ControlCLI(unittest.TestCase):
         self.assertIn("Trust Grade  : E", stdout)
         self.assertIn("Status       : QUARANTINE", stdout)
 
+        # Test Proof-of-Work Solve & Verify
+        code, stdout, stderr = self._run_cli(["pow", "--bits", "10", "--solve"])
+        self.assertEqual(code, 0)
+        self.assertIn("Solving Proof-of-Work challenge (10 bits)...", stdout)
+        self.assertIn("PoW Status   : VALID", stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

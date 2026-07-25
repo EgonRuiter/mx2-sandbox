@@ -122,6 +122,16 @@ python mx2ctl.py queue approve <message_id>
 python mx2ctl.py queue reject <message_id>
 ```
 
+#### ⚡ Proof-of-Work (PoW) Anti-Spam Challenges
+You can solve and verify Hashcash-style CPU Proof-of-Work challenges using the `pow` command:
+```bash
+# Solve a 10-bit collision challenge locally and verify it against the gateway daemon
+python mx2ctl.py pow --bits 10 --solve
+
+# Verify a pre-calculated nonce against a custom challenge payload
+python mx2ctl.py pow --challenge "bob@example.com:alice@example.com:1784847458" --nonce 1291 --bits 10
+```
+
 ---
 
 ## 🧪 Running Unit Tests
