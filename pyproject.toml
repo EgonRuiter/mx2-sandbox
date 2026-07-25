@@ -24,7 +24,9 @@ classifiers = [
     "Topic :: Communications :: Email",
     "Topic :: Security :: Cryptography"
 ]
-dependencies = []
+dependencies = [
+    "cryptography>=41.0.0"
+]
 
 [project.optional-dependencies]
 dev = [

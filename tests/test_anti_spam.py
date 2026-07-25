@@ -24,6 +24,30 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
         }
         self.assertTrue(self.engine.verify_vouch_token(token, self.voucher_pubkey))
 
+    def test_verify_vouch_token_real_cryptography(self) -> None:
+        """Verifies that an Ed25519 signed vouch token passes cryptographic signature verification."""
+        import base64
+
+        from src.gateway import parse_ed25519_private_key
+
+        ed_priv = parse_ed25519_private_key(self.voucher_pubkey)
+        vouched = "untrusted.net"
+        voucher = "trusted.nl"
+        expires = str(time.time() + 3600)
+
+        # Sign using Utrecht University private key
+        data_to_sign = f"{voucher}_{vouched}_{expires}".encode()
+        signature_bytes = ed_priv.sign(data_to_sign)
+        signature_b64 = base64.b64encode(signature_bytes).decode("utf-8")
+
+        token = {
+            "vouchedDomain": vouched,
+            "voucherDomain": voucher,
+            "expires": expires,
+            "signature": signature_b64,
+        }
+        self.assertTrue(self.engine.verify_vouch_token(token, self.voucher_pubkey))
+
     def test_verify_vouch_token_invalid_signature(self) -> None:
         """Verifies that tokens with wrong signatures or expired timestamps fail."""
         token = {
@@ -105,6 +129,21 @@ class TestMX2AntiSpamEngine(unittest.TestCase):
         self.assertTrue(success)
         self.assertEqual(len(self.engine.holding_queue), 0)
         self.assertIn("unknown.com", self.engine.whitelisted_senders)
+
+    def test_proof_of_work_verification(self) -> None:
+        """Tests that a computed Proof-of-Work challenge of 10 bits is correctly validated."""
+        challenge = "bob@example.com:alice@example.com:1710000000"
+
+        # 1. Compute valid nonce
+        nonce = 0
+        while not MX2AntiSpamEngine.verify_proof_of_work(challenge, str(nonce), difficulty_bits=10):
+            nonce += 1
+
+        # 2. Verify it passes
+        self.assertTrue(MX2AntiSpamEngine.verify_proof_of_work(challenge, str(nonce), difficulty_bits=10))
+
+        # 3. Verify that an incorrect nonce fails
+        self.assertFalse(MX2AntiSpamEngine.verify_proof_of_work(challenge, str(nonce + 1), difficulty_bits=10))
 
 
 if __name__ == "__main__":

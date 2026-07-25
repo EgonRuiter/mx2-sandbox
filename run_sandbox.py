@@ -5,6 +5,7 @@ Demonstrates SemVer capabilities negotiation, E2EE HPKE message encryption
 and decryption, DIDs, delivery receipts, and Automated Trust Routing (Grades A-E).
 """
 
+import base64
 import json
 import sys
 import time
@@ -116,12 +117,22 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
     recipient = "bob@example.com"
     voucher_pubkey = "MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327"
 
-    # Utrecht University signs a vouch token
+    # Utrecht University signs a vouch token using Ed25519
+    from src.gateway import parse_ed25519_private_key
+
+    ed_priv = parse_ed25519_private_key(voucher_pubkey)
+    vouched_domain = "untrusted-startup.net"
+    voucher_domain = "trusted.nl"
+    expires_ts = str(time.time() + 3600)
+    data_to_sign = f"{voucher_domain}_{vouched_domain}_{expires_ts}".encode()
+    signature_bytes = ed_priv.sign(data_to_sign)
+    signature_b64 = base64.b64encode(signature_bytes).decode("utf-8")
+
     vouch_token = {
-        "vouchedDomain": "untrusted-startup.net",
-        "voucherDomain": "trusted.nl",
-        "expires": str(time.time() + 3600),
-        "signature": f"sig_trusted.nl_untrusted-startup.net_{voucher_pubkey[:6]}",
+        "vouchedDomain": vouched_domain,
+        "voucherDomain": voucher_domain,
+        "expires": expires_ts,
+        "signature": signature_b64,
     }
 
     scenarios = [
@@ -179,8 +190,23 @@ Hello! This mail is routed directly via DIDs without DNSSEC requirements.
     for item in engine.holding_queue:
         print(f"    - [{item['messageId']}] Sender: {item['sender']} | Subject: {item['subject']}")
 
-    # --- Section 6: Structured Human-Readable JSON Errors ---
-    print_banner("6. Structured Human-Readable JSON Errors")
+    # --- Section 6: Active Proof-of-Work Anti-Spam Challenge ---
+    print_banner("6. Active Proof-of-Work Anti-Spam Challenge")
+    print("[*] Senders on Grade D (Unknown) paths must solve a CPU puzzle to deliver.")
+    challenge_payload = f"{recipient}:newsletter@marketing-bot.com:{time.time()}"
+    print(f"    - Challenge Payload: {challenge_payload}")
+    print("    - Computing 12-bit collision nonce...")
+    start_time = time.time()
+    nonce = 0
+    while not engine.verify_proof_of_work(challenge_payload, str(nonce), difficulty_bits=12):
+        nonce += 1
+    elapsed = time.time() - start_time
+    print(f"    [+] Found valid nonce: {nonce} (took {elapsed:.4f} seconds)")
+    is_valid = engine.verify_proof_of_work(challenge_payload, str(nonce), difficulty_bits=12)
+    print(f"    - Verifying nonce: {'VALID' if is_valid else 'INVALID'}")
+
+    # --- Section 7: Structured Human-Readable JSON Errors ---
+    print_banner("7. Structured Human-Readable JSON Errors")
     print("Simulating error response for an empty email submission...")
 
     error_payload = {

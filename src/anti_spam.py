@@ -5,6 +5,8 @@ routing messages to the Inbox, Junk, or Quarantine Queue based on identity keys,
 WoT vouches, shared social graphs, and signature verification.
 """
 
+import base64
+import hashlib
 import time
 from typing import Any
 
@@ -77,7 +79,7 @@ class MX2AntiSpamEngine:
         return len(history)
 
     def verify_vouch_token(self, token: dict[str, Any], voucher_public_key: str) -> bool:
-        """Verifies a Web of Trust vouching token signature.
+        """Verifies a Web of Trust vouching token signature (Ed25519 with mock fallback).
 
         Args:
             token (dict): Cryptographic token dictionary.
@@ -92,18 +94,47 @@ class MX2AntiSpamEngine:
         try:
             vouched = token.get("vouchedDomain", "")
             voucher = token.get("voucherDomain", "")
-            expires = float(token.get("expires", 0.0))
+            expires_val = token.get("expires", "0")
             signature = token.get("signature", "")
 
             # Check expiration
-            if expires < time.time():
+            if float(expires_val) < time.time():
                 return False
 
-            # Verify mock signature format: sig_[voucherDomain]_[vouchedDomain]_[voucherPublicKey[:6]]
+            # 1. Try real Ed25519 signature verification
+            try:
+                from src.gateway import parse_ed25519_public_key
+
+                pub_key = parse_ed25519_public_key(voucher_public_key)
+                sig_bytes = base64.b64decode(signature)
+                data_to_verify = f"{voucher}_{vouched}_{expires_val}".encode()
+                pub_key.verify(sig_bytes, data_to_verify)
+                return True
+            except Exception:
+                pass
+
+            # 2. Fallback to mock signature format
             expected_sig = f"sig_{voucher}_{vouched}_{voucher_public_key[:6]}"
             return signature == expected_sig
         except (ValueError, TypeError, AttributeError):
             return False
+
+    @staticmethod
+    def verify_proof_of_work(challenge_payload: str, nonce: str, difficulty_bits: int = 10) -> bool:
+        """Verifies a Proof-of-Work challenge by counting leading zero bits in SHA-256."""
+        hash_input = f"{challenge_payload}:{nonce}".encode()
+        h = hashlib.sha256(hash_input).digest()
+
+        total_zero_bits = 0
+        for byte in h:
+            if byte == 0:
+                total_zero_bits += 8
+            else:
+                binary_str = f"{byte:08b}"
+                leading_zeros = len(binary_str) - len(binary_str.lstrip("0"))
+                total_zero_bits += leading_zeros
+                break
+        return total_zero_bits >= difficulty_bits
 
     def evaluate_trust_grade(
         self,
