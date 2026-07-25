@@ -169,6 +169,56 @@ def cmd_pow(args: argparse.Namespace) -> None:
     print("-" * 50)
 
 
+def cmd_stats(args: argparse.Namespace) -> None:
+    """Queries and displays live Prometheus daemon telemetry metrics."""
+    url = f"{MX2_URL}/metrics"
+    try:
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as res:
+            text = res.read().decode("utf-8")
+            print("\033[96m=" * 50)
+            print(" MX2 DAEMON LIVE TELEMETRY STATS ".center(50, "="))
+            print("=" * 50 + "\033[0m")
+            for line in text.splitlines():
+                if line and not line.startswith("#"):
+                    parts = line.split()
+                    if len(parts) == 2:
+                        print(f"\033[93m{parts[0]:<32}\033[0m : \033[97m{parts[1]}\033[0m")
+            print("\033[96m=" * 50 + "\033[0m")
+    except Exception as err:
+        print(f"\033[91m[-] Error fetching stats: {err}\033[0m")
+        sys.exit(1)
+
+
+def cmd_proxy(args: argparse.Namespace) -> None:
+    """Runs local loopback SMTP/IMAP proxy server."""
+    import asyncio
+
+    from src.legacy_proxy import MX2LegacyIMAPProxy, MX2LegacySMTPProxy
+
+    print("\033[96m[*] Starting MX2 Legacy SMTP/IMAP Loopback Proxy...\033[0m")
+    print("    - SMTP Proxy listening on 127.0.0.1:10025")
+    print("    - IMAP Proxy listening on 127.0.0.1:10143")
+    print(f"    - Target REST Gateway: {MX2_URL}")
+
+    async def _run() -> None:
+        smtp_proxy = MX2LegacySMTPProxy(target_url=MX2_URL)
+        imap_proxy = MX2LegacyIMAPProxy()
+        await smtp_proxy.start()
+        await imap_proxy.start()
+        print("\033[92m[+] Proxies active. Press Ctrl+C to terminate.\033[0m")
+        try:
+            await asyncio.Event().wait()
+        except KeyboardInterrupt:
+            await smtp_proxy.stop()
+            await imap_proxy.stop()
+
+    try:
+        asyncio.run(_run())
+    except KeyboardInterrupt:
+        print("\n\033[93m[*] Proxy stopped.\033[0m")
+
+
 def main() -> None:
     """Main CLI parser entrypoint."""
     parser = argparse.ArgumentParser(description="MX2 Administration Utility (mx2ctl)", prog="mx2ctl")
@@ -177,6 +227,12 @@ def main() -> None:
 
     # status
     subparsers.add_parser("status", help="Query gateway daemon state & SemVer capabilities")
+
+    # stats
+    subparsers.add_parser("stats", help="Display live Prometheus daemon metrics")
+
+    # proxy
+    subparsers.add_parser("proxy", help="Run local SMTP (10025) and IMAP (10143) loopback proxy")
 
     # queue [list / approve / reject]
     queue_parser = subparsers.add_parser("queue", help="Manage quarantined Grade E messages")
@@ -211,6 +267,8 @@ def main() -> None:
 
     commands = {
         "status": cmd_status,
+        "stats": cmd_stats,
+        "proxy": cmd_proxy,
         "queue": cmd_queue,
         "resolve": cmd_resolve,
         "test": cmd_test,

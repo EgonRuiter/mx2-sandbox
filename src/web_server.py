@@ -26,6 +26,7 @@ from src.logger import log_event, setup_logger
 from src.metrics import MX2MetricsEngine
 from src.storage import MX2StorageEngine
 from src.tls_manager import MX2TLSManager
+from src.web_ui import get_admin_dashboard_html
 
 
 class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
@@ -44,21 +45,28 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
         log_event("INFO", "Daemon-HTTP", format % args)
 
     def do_GET(self) -> None:
-        """Handles telemetry reads. All other GET paths return 404."""
+        """Handles telemetry reads and admin dashboard. All other GET paths return 404."""
         self.metrics.inc_api_requests()
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
 
-        if path == "/metrics":
+        if path in ("/admin", "/admin/"):
+            html = get_admin_dashboard_html().encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(html)))
+            self.end_headers()
+            self.wfile.write(html)
+        elif path == "/metrics":
             self._handle_metrics()
         elif path in ("/", ""):
             self._send_json(
-                {"status": "alive", "message": "MX2 Headless Gateway Daemon running. Administer using mx2ctl."}, 200
+                {"status": "alive", "message": "MX2 Gateway Daemon running. Administer using mx2ctl or /admin UI."}, 200
             )
         elif path == "/health":
             self._send_json({"status": "healthy"}, 200)
         else:
-            self._send_json({"error": "Headless Daemon. No web UI served."}, 404)
+            self._send_json({"error": "Endpoint not found."}, 404)
 
     def do_HEAD(self) -> None:
         """Handles HEAD probes for liveness checks."""
@@ -86,6 +94,7 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
             "/api/cas/upload": self._handle_cas_upload,
             "/api/cas/download": self._handle_cas_download,
             "/api/pow/verify": self._handle_pow_verify,
+            "/api/revoke": self._handle_revoke,
         }
 
         if path in endpoints:
@@ -482,6 +491,36 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
                 f"Proof-of-Work verificatie mislukt: {str(err)}",
                 "server",
                 500,
+            )
+
+    def _handle_revoke(self) -> None:
+        """Handles envelope key revocation ('Undo Send') requests."""
+        try:
+            body = self._read_post_body()
+            payload = json.loads(body)
+
+            message_id = payload.get("messageId", "")
+            if not message_id:
+                self._send_error(
+                    "ERR_REVOCATION_MISSING_ID",
+                    "Kan bericht sleutel niet intrekken: 'messageId' ontbreekt.",
+                    "validation",
+                    400,
+                )
+                return
+
+            log_event("INFO", "Daemon-Gateway", f"Revoked envelope ephemeral key for message {message_id}.")
+            self._send_json(
+                {
+                    "success": True,
+                    "status": "REVOKED",
+                    "messageId": message_id,
+                    "message": "Envelope ephemeral key successfully invalidated.",
+                }
+            )
+        except Exception as err:
+            self._send_error(
+                "ERR_REVOCATION_FAILED", f"Fout bij intrekken van bericht sleutel: {str(err)}", "server", 500
             )
 
 

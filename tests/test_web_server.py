@@ -152,6 +152,23 @@ class TestMX2WebServer(unittest.TestCase):
         self.assertTrue(data["success"])
         self.assertTrue(data["valid"])
 
+    def test_revoke_api(self) -> None:
+        """Tests key revocation endpoint."""
+        payload = {"messageId": "msg_revoke_test_123"}
+        code, data = self._post("/api/revoke", payload)
+        self.assertEqual(code, 200)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["status"], "REVOKED")
+
+    def test_admin_ui_endpoint(self) -> None:
+        """Tests that the /admin dashboard route serves HTML."""
+        url = f"{self.base_url}/admin"
+        with urllib.request.urlopen(url) as resp:
+            self.assertEqual(resp.status, 200)
+            self.assertIn("text/html", resp.headers.get("Content-Type", ""))
+            body = resp.read().decode("utf-8")
+            self.assertIn("MX2 Protocol Daemon — Admin Console", body)
+
 
 if __name__ == "__main__":
     unittest.main()
