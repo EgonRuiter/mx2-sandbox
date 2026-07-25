@@ -1,175 +1,169 @@
-# MX2 (Mail eXchange 2.0) Local Sandbox
+# MX2 (Mail eXchange 2.0) Reference Daemon & Sandbox
 
 [![MX2 Sandbox CI](https://github.com/EgonRuiter/mx2-sandbox/actions/workflows/ci.yml/badge.svg)](https://github.com/EgonRuiter/mx2-sandbox/actions/workflows/ci.yml)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Welcome to the **MX2** (Mail eXchange 2.0) local development sandbox. This repository contains the reference implementation package for the next-generation federated messaging protocol designed to replace SMTP, IMAP, and POP3. 
+Welcome to **MX2 (Mail eXchange 2.0)** — the reference implementation for the next-generation federated messaging protocol designed to replace legacy SMTP, IMAP, and POP3.
 
-MX2 replaces raw line-command socket states with structured JSON-based exchanges multiplexed over **HTTP/3 (QUIC) on port 443**, utilizing DNSSEC-signed identity keys, mandatory End-to-End Encryption (HPKE), and automated cryptographic trust grading for anti-spam.
+MX2 replaces plain-text socket states with **structured JSON envelopes**, mandatory **End-to-End Encryption (X25519 / AES-256-GCM)**, **Decentralized Identifiers (W3C DIDs)**, **DNSSEC public key discovery**, **CPU Proof-of-Work spam guarantees**, and **cryptographic non-repudiation delivery receipts**.
 
 ---
 
-## 📂 Repository Structure
+## ✨ Key Feature Overview
+
+| Feature | Description | Status |
+| :--- | :--- | :---: |
+| 🔒 **Real Cryptography** | X25519 Diffie-Hellman, HKDF-SHA256, AES-256-GCM envelope encryption & Ed25519 signatures | ✅ Production Ready |
+| 🔑 **Decentralized Identifiers** | Native W3C DID support (`did:mx2`, `did:key`, `did:web`) with in-memory TTL LRU caching | ✅ Production Ready |
+| 🌐 **DNSSEC & SRV Resolution** | DNS TXT public key discovery (`_mx2key`) & SRV gateway routing (`_mx2._tcp`) | ✅ Production Ready |
+| 🗄️ **SQLite Persistent Storage** | Thread-safe atomic persistence for holding queues, whitelists, social graphs & CAS metadata | ✅ Production Ready |
+| ⚡ **Proof-of-Work Anti-Spam** | CPU Hashcash challenge verification for Grade D senders to guarantee zero-cost spam protection | ✅ Production Ready |
+| 🖥️ **Web Admin Dashboard** | Single-page dark-mode Web UI served at `http://localhost:8000/admin` | ✅ Production Ready |
+| 🔄 **SMTP / IMAP Proxy** | Drop-in loopback proxy (`10025` SMTP / `10143` IMAP) for standard email clients (Thunderbird, Outlook) | ✅ Production Ready |
+| ⏱️ **Undo Send Revocation** | 30-second key-hold invalidation endpoint (`POST /api/revoke`) | ✅ Production Ready |
+| 🔒 **TLS & ACME Manager** | Modern TLS 1.3/1.2 SSLContext wrapper & Let's Encrypt `http-01` challenge hooks | ✅ Production Ready |
+
+---
+
+## 📂 Repository Architecture Map
 
 ```
 mx2-sandbox/
-├── .github/             # CI/CD workflows and configs
-├── schema/              # Strict JSON Payload Schemas
-│   └── message.json     # MX2 message validation schema
-├── dns/                 # DNS Zone specs (BIND9 formatting)
+├── .github/             # CI/CD GitHub Actions multi-version Python workflows
+├── schema/              # JSON Schema definitions for MX2 envelopes
+│   └── message.json     # MX2 message payload validation schema
+├── dns/                 # DNS Zone specifications (BIND9 format)
 │   └── zone.dns
 ├── docs/                # Protocol specifications (IETF draft format)
 │   └── draft-ruiter-mx2-protocol-specification.txt
-├── config/              # Daemon configuration
-│   └── mx2.conf         # INI configuration parameters
-├── src/                 # Core Python engine code
-│   ├── anti_spam.py     # Cryptographic trust & anti-spam engine
-│   ├── gateway.py       # SMTP-to-MX2 bilingual translation gateway
+├── config/              # Production configuration files
+│   └── mx2.conf         # INI configuration parameters (daemon, production, resolvers, tls)
+├── src/                 # Core MX2 protocol engines
+│   ├── gateway.py       # Bilingual SMTP-to-MX2 E2EE translation gateway
+│   ├── anti_spam.py     # 5-Tiered Trust Grading (A-E) & Proof-of-Work engine
+│   ├── storage.py       # SQLite persistent storage manager (tables & transactions)
+│   ├── dns_resolver.py   # DNSSEC TXT public key & SRV endpoint resolver
+│   ├── did_resolver.py   # W3C DID Document resolver with TTL caching
+│   ├── tls_manager.py    # SSL/TLS 1.3 Context & ACME certificate manager
+│   ├── metrics.py        # Prometheus telemetry metrics engine
+│   ├── legacy_proxy.py   # Asynchronous SMTP (10025) & IMAP (10143) loopback proxies
+│   ├── web_ui.py         # Embedded single-page HTML5/CSS3 Web Admin Console
+│   ├── web_server.py    # Main REST API daemon & HTTP handler
 │   ├── cas.py           # Content-Addressable Storage (CAS) engine
-│   ├── logger.py        # Structured JSON logging utility
-│   └── web_server.py    # Headless REST API daemon
-├── tests/               # Unit testing suite
-├── mx2ctl.py            # Unix-style CLI administration utility
-├── run_sandbox.py       # End-to-end integration CLI simulator
+│   └── logger.py        # Structured JSON logging utility
+├── tests/               # Unit testing suite (41+ tests)
+│   ├── test_gateway.py
+│   ├── test_anti_spam.py
+│   ├── test_storage.py
+│   ├── test_resolvers.py
+│   ├── test_tls_metrics.py
+│   ├── test_legacy_proxy.py
+│   └── test_web_server.py
+├── mx2ctl.py            # CLI administration & telemetry utility
+├── run_sandbox.py       # Interactive end-to-end sandbox simulator
+├── qol_migration_roadmap.md # Quality-of-Life features & legacy migration strategy
+├── setup.ps1 / setup.sh # 1-Click developer onboarding scripts
 ├── LICENSE              # MIT License
-└── CONTRIBUTING.md      # Development and style guidelines
+└── CONTRIBUTING.md      # Guidelines for code style, docstrings & PRs
 ```
 
 ---
 
 ## 🚀 Quickstart Guide
 
-The MX2 sandbox runs with **zero external dependencies** using Python's standard library.
+MX2 runs with **zero mandatory external runtime dependencies** beyond standard Python `cryptography`.
 
-### 1. Run the End-to-End Simulator
-To simulate version negotiations, DID-based E2EE envelope wrapping, HPKE decryptions, and trust grade evaluations:
+### 1. Run the Interactive Sandbox Demo
+Experience version negotiations, DID key lookups, E2EE envelope wrapping, HPKE decryptions, delivery receipts, and Proof-of-Work challenges:
 ```bash
 python run_sandbox.py
 ```
 
-### 2. Run the Headless Gateway Daemon
-
-**Option A: Native Python**
-Start the background REST gateway daemon:
+### 2. Start the Daemon & Open Web Admin Console
+Launch the daemon:
 ```bash
 python src/web_server.py
 ```
+Open your browser and navigate to **`http://localhost:8000/admin`** to launch the **Dark-Mode Web Admin Dashboard**:
+- Monitor live API calls, PoWs, and quarantine metrics.
+- Approve or discard Grade E quarantined emails with 1 click.
+- Test E2EE envelope translations interactively in your browser!
 
-**Option B: Docker Compose**
-Launch the gateway daemon inside a container with mapped persistent volumes:
+### 3. Connect Legacy Email Clients (Thunderbird / Outlook)
+Run the local loopback SMTP and IMAP proxies:
 ```bash
-docker compose up -d --build
+python mx2ctl.py proxy
 ```
+- **SMTP Proxy**: Point your email client's outgoing server to `127.0.0.1:10025` (No SSL, Plain Auth).
+- **IMAP Proxy**: Point your incoming server to `127.0.0.1:10143`.
+- Raw emails sent through port `10025` are automatically translated to encrypted MX2 envelopes!
 
-### 3. Use the CLI Admin Utility (`mx2ctl`)
-With the daemon running (locally or on Render/Docker), open a terminal to administer and test the gateway.
+### 4. CLI Administration (`mx2ctl`)
 
-#### Configure API Target (Optional)
-By default, `mx2ctl` targets `http://127.0.0.1:8000`. To point to a remote daemon (like Render):
 ```bash
-# Windows PowerShell
-$env:MX2_URL="https://mx2-sandbox.onrender.com"
-
-# Linux / macOS
-export MX2_URL="https://mx2-sandbox.onrender.com"
-```
-
-#### Run Basic Administration Commands
-```bash
-# Query gateway daemon status and negotiated SemVer capabilities
+# Query daemon health and capabilities
 python mx2ctl.py status
 
-# Cryptographically resolve a DID key
+# View live Prometheus telemetry counters in terminal
+python mx2ctl.py stats
+
+# Cryptographically resolve a DID key or domain public key
 python mx2ctl.py resolve did:mx2:MCowBQYDK2VwAyEAdS+7fGZ8A1839gBbcD81hS9bV2g327
-```
 
-#### 🧪 Testing Trust Grade Routing (Inbox vs. Junk vs. Quarantine)
-MX2 implements a 5-tiered Automated Trust Grading system (A-E) inside `src/anti_spam.py`. You can test these paths using special flags on the `test` command:
+# Test trust grade routing with mock sender
+python mx2ctl.py test --sender notifications@github.com --subject "Security Alert"
 
-##### 🟢 Grade A (Inbox) — Reputable Domains
-Emails from established domains (like `github.com` or `google.com`) are routed directly to the recipient's **Inbox**:
-```bash
-python mx2ctl.py test --sender notifications@github.com --subject "GitHub Alert"
-# Result: Status = INBOX, Trust Grade = A
-```
+# Test spoofing detection (Grade E quarantine)
+python mx2ctl.py test --sender billing@github.com --subject "Update Payment" --spoof
 
-##### 🟡 Grade D (Junk) — Unknown Senders
-Emails from unknown, un-vouched senders with valid cryptographic signatures go directly to **Junk**:
-```bash
-python mx2ctl.py test --sender newsletter@marketing.com --subject "Weekly Offer"
-# Result: Status = JUNK, Trust Grade = D
-```
-
-##### 🔴 Grade E (Quarantine) — Spoofed Identities
-Emails that fail cryptographic signature verification (such as domain spoofing attempts) are diverted to the **Quarantine Queue** on the gateway:
-```bash
-python mx2ctl.py test --sender billing@github.com --subject "Account Suspended" --spoof
-# Result: Status = QUARANTINE, Trust Grade = E
-```
-
-#### 📥 Resolving Quarantined Messages
-When a message goes to quarantine, it is held in the gateway inbox holding queue. You can list, approve, or discard it:
-```bash
-# 1. List all currently quarantined messages
+# List and approve quarantined emails
 python mx2ctl.py queue list
-
-# 2. Approve a quarantined message (whitelists the sender and releases the mail to Inbox)
 python mx2ctl.py queue approve <message_id>
 
-# 3. Discard a quarantined message (deletes the mail from the holding queue)
-python mx2ctl.py queue reject <message_id>
-```
-
-#### ⚡ Proof-of-Work (PoW) Anti-Spam Challenges
-You can solve and verify Hashcash-style CPU Proof-of-Work challenges using the `pow` command:
-```bash
-# Solve a 10-bit collision challenge locally and verify it against the gateway daemon
+# Solve and verify a CPU Proof-of-Work challenge
 python mx2ctl.py pow --bits 10 --solve
-
-# Verify a pre-calculated nonce against a custom challenge payload
-python mx2ctl.py pow --challenge "bob@example.com:alice@example.com:1784847458" --nonce 1291 --bits 10
 ```
 
 ---
 
 ## 🧪 Running Unit Tests
 
-Unit tests verify E2EE translation envelopes, spam grade routing, rate limiting, and CAS deduplication:
+Run the complete 41-test suite locally:
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
+To run linter and formatter checks:
+```bash
+python -m ruff check .
+python -m ruff format --check .
+```
+
 ---
 
-## 📜 Contributing & Developer Onboarding
+## 🤝 Contributor Onboarding Guide
 
-Contributions are welcome! We want to make it as easy as possible for developers to get started:
+We welcome all contributors! Whether you want to fix a bug, improve documentation, or build a new feature, getting started is fast and simple:
 
-### ⚡ 1-Step Local Developer Setup
-We provide automated scripts to set up a virtual environment, install dev dependencies (Ruff, Pre-commit), register git hooks, and run all validation tests:
+### ⚡ 1-Step Developer Environment Setup
+Automated setup scripts create a Python virtual environment, install dev tools (`ruff`), and register pre-commit hooks:
 
-* **Windows (PowerShell)**:
+- **Windows (PowerShell)**:
   ```powershell
   ./setup.ps1
   ```
-* **macOS / Linux (Bash)**:
+- **macOS / Linux (Bash)**:
   ```bash
   chmod +x setup.sh
   ./setup.sh
   ```
 
-### 🏷️ Good First Issues
-Check out our open issues labeled **[good first issue](https://github.com/EgonRuiter/mx2-sandbox/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22)** on GitHub to start contributing!
-
-### 🗺️ Future Development Roadmap
-If you want to contribute but don't know where to start, here are some high-priority roadmap goals we are looking to build:
-1. **Dynamic CPU Hash Challenges**: Implement actual cryptographic Proof-of-Work verification for Grade D senders (using hashcash-style algorithms).
-2. **True HTTP/3 (QUIC) Transport**: Integrate a Python QUIC library (e.g. `aioquic`) to replace the basic HTTP/1.1 handler and match the MX2 specifications.
-3. **Automated BIND9 Zone Exports**: Write a utility to export resolved DID public keys directly into BIND9 or CoreDNS compatible zone records.
-
-Please review our **[CONTRIBUTING.md](CONTRIBUTING.md)** file for guidelines on coding standards, docstrings, and formatting.
+### 🏷️ How to Pick Up a Task
+1. Check out our open issues labeled **[good first issue](https://github.com/EgonRuiter/mx2-sandbox/issues)** on GitHub.
+2. Review **[qol_migration_roadmap.md](qol_migration_roadmap.md)** for planned QoL migration features.
+3. Review **[CONTRIBUTING.md](CONTRIBUTING.md)** for our coding standards (Google-style docstrings, Ruff linter compliance).
 
 ---
 

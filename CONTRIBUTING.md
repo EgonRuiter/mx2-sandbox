@@ -1,36 +1,84 @@
-# Contributing to MX2
+# Contributing to MX2 (Mail eXchange 2.0)
 
-Thank you for your interest in contributing to MX2 (Mail eXchange 2.0)! This document outlines the standards and procedures for contributing to keep the project clean, refactored, and thoroughly documented.
+Thank you for your interest in contributing to **MX2**! We want to make contributing to this next-generation protocol simple, rewarding, and accessible to developers of all skill levels.
 
-## Code Quality Standards
+---
 
-We hold the MX2 codebase to a high standard. To keep the project maintainable, please follow these principles:
+## 🌟 Code of Conduct & Core Philosophy
 
-1. **PEP 8 Compliance**: All Python code must conform to the PEP 8 style guide.
-2. **Strict Docstrings**: Every module, class, method, and function must have a Google-style docstring explaining its behavior, arguments, return values, and raised exceptions.
-3. **No External Dependencies in Core**: The core libraries (`anti_spam.py`, `gateway.py`, `cas.py`) must remain dependency-free, utilizing Python's robust standard libraries to ease integration and keep the code lightweight.
-4. **Refactoring First**: Before adding features, refactor existing code if it improves readability or structure. Avoid duplicate logic.
+1. **Protocol Simplicity First**: MX2's core protocol engine must remain lightweight, 0-dependency, clean, and straightforward to implement.
+2. **Zero Mandatory External Core Dependencies**: Core logic (`gateway.py`, `anti_spam.py`, `storage.py`, `did_resolver.py`) relies exclusively on Python standard libraries plus the `cryptography` package.
+3. **High Code Quality**: All contributions must pass linters (`ruff`), include Google-style docstrings, and maintain 100% test suite pass rates.
 
-## Documentation Guidelines
+---
 
-- Always update the official IETF-style draft at `docs/draft-ruiter-mx2-protocol-specification.txt` when modifying protocol mechanics.
-- If payload definitions change, ensure the schema at `schema/message.json` is updated and remains valid.
+## 🛠️ Step-by-Step Development Workflow
 
-## Testing Guidelines
+### 1. Fork & Clone
+```bash
+git clone https://github.com/YOUR-USERNAME/mx2-sandbox.git
+cd mx2-sandbox
+```
 
-- Every new feature or bug fix **must** be accompanied by comprehensive unit tests.
-- Place tests in the `tests/` folder with filenames starting with `test_`.
-- Run tests locally using:
-  ```bash
-  python -m unittest discover -s tests -p "test_*.py"
+### 2. Run Automated Developer Setup
+Set up virtual environment, install dev dependencies (`ruff`), and verify test baseline:
+
+- **Windows (PowerShell)**:
+  ```powershell
+  ./setup.ps1
   ```
-- Code coverage should target 90%+ for core components.
+- **macOS / Linux (Bash)**:
+  ```bash
+  chmod +x setup.sh
+  ./setup.sh
+  ```
 
-## Development Sandbox Workflow
+### 3. Run the Unit Test Suite
+Ensure all 41+ unit tests pass locally before making changes:
+```bash
+python -m unittest discover -s tests -p "test_*.py"
+```
 
-1. Fork the repository and clone it locally.
-2. Run unit tests to verify the baseline: `python -m unittest discover -s tests -p "test_*.py"`.
-3. Launch the headless daemon locally: `python src/web_server.py`.
-4. Administer the daemon and check status using the CLI utility: `python mx2ctl.py status`.
-5. Implement your changes, refactor as necessary, and ensure all tests pass.
-6. Create a descriptive Pull Request outlining the changes and verification steps.
+### 4. Code Formatting & Linting
+We use **Ruff** for high-speed Python linting and formatting:
+```bash
+# Check for linting errors
+python -m ruff check .
+
+# Automatically fix lint errors
+python -m ruff check --fix .
+
+# Auto-format all Python code
+python -m ruff format .
+```
+
+---
+
+## 📝 Documenting Your Work
+
+- Every module, class, and method must have a **Google-style docstring**:
+  ```python
+  def verify_proof_of_work(challenge: str, nonce: str, difficulty_bits: int = 10) -> bool:
+      """Verifies a Hashcash CPU Proof-of-Work solution nonce against a challenge string.
+
+      Args:
+          challenge (str): The challenge payload.
+          nonce (str): The calculated nonce solution.
+          difficulty_bits (int): Required zero-bit prefix count.
+
+      Returns:
+          bool: True if valid, False otherwise.
+      """
+  ```
+- If you add or modify a REST API route in `src/web_server.py`, add a corresponding unit test in `tests/test_web_server.py`.
+
+---
+
+## 🚀 Submitting a Pull Request (PR)
+
+1. Create a feature branch: `git checkout -b feat/my-new-feature`.
+2. Commit your changes with a conventional commit message (e.g. `feat(storage): add PostgreSQL backend support`).
+3. Push to your fork and submit a Pull Request targeting `main`.
+4. GitHub Actions CI will automatically run unit tests and Ruff linter checks across Python 3.9, 3.10, 3.11, and 3.12.
+
+Thank you for helping build the future of open, secure, decentralized email! 🚀
