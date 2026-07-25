@@ -19,14 +19,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.anti_spam import MX2AntiSpamEngine
 from src.cas import MX2CASEngine
+from src.did_resolver import MX2DIDResolver
+from src.dns_resolver import MX2DNSResolver
 from src.gateway import BilingualGateway
 from src.logger import log_event, setup_logger
+from src.storage import MX2StorageEngine
 
 
 class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
     """Hardened REST API and Prometheus telemetries handler for the MX2 Daemon."""
 
-    anti_spam = MX2AntiSpamEngine()
+    storage_engine = MX2StorageEngine()
+    dns_resolver = MX2DNSResolver()
+    did_resolver = MX2DIDResolver()
+    anti_spam = MX2AntiSpamEngine(storage_engine=storage_engine)
     cas_engine = MX2CASEngine()
 
     # Telemetry metrics counters

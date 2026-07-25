@@ -8,7 +8,7 @@ WoT vouches, shared social graphs, and signature verification.
 import base64
 import hashlib
 import time
-from typing import Any
+from typing import Any, Optional
 
 
 class MX2AntiSpamEngine:
@@ -25,22 +25,38 @@ class MX2AntiSpamEngine:
     # Established high-reputation domain names
     REPUTABLE_DOMAINS: set[str] = {"github.com", "google.com", "utrecht-uni.nl", "trusted.nl", "trusted.com"}
 
-    def __init__(self, quota_limit: int = 100) -> None:
-        """Initializes the trust engine with default settings.
+    def __init__(self, quota_limit: int = 100, storage_engine: Optional[Any] = None) -> None:
+        """Initializes the trust engine with default settings and optional persistent storage.
 
         Args:
             quota_limit (int): Hourly free message threshold. Defaults to 100.
+            storage_engine (Optional[Any]): Persistent storage engine instance.
         """
         self.quota_limit = quota_limit
         # Key: (sender_domain, recipient_domain) -> List of timestamps (floats)
         self.quota_history: dict[tuple[str, str], list[float]] = {}
-        self.holding_queue: list[dict[str, Any]] = []
-        self.whitelisted_senders: set[str] = set()
+        self._holding_queue: list[dict[str, Any]] = []
+        self._whitelisted_senders: set[str] = set()
+        self.storage_engine = storage_engine
 
         # Mock Social Graph contacts for Grade C evaluation
         self.contacts_database: dict[str, set[str]] = {
             "bob@example.com": {"friend@collaborator.com", "partner@startup.nl"}
         }
+
+    @property
+    def holding_queue(self) -> list[dict[str, Any]]:
+        """Returns holding queue from persistent storage engine or memory fallback."""
+        if self.storage_engine:
+            return self.storage_engine.get_holding_queue()
+        return self._holding_queue
+
+    @property
+    def whitelisted_senders(self) -> set[str]:
+        """Returns whitelisted senders set from persistent storage engine or memory fallback."""
+        if self.storage_engine:
+            return self.storage_engine.get_whitelisted_set().union(self._whitelisted_senders)
+        return self._whitelisted_senders
 
     def record_message(self, sender_domain: str, recipient_domain: str) -> None:
         """Records a message transmission for rate-limiting calculations.
@@ -221,11 +237,14 @@ class MX2AntiSpamEngine:
             subject (str): Subject line.
             envelope (dict): Outer envelope dict.
         """
-        # Linear search in the queue is fine as the holding queue size is small
-        if any(msg["messageId"] == message_id for msg in self.holding_queue):
+        if self.storage_engine:
+            self.storage_engine.quarantine_message(message_id, sender, subject, envelope)
             return
 
-        self.holding_queue.append(
+        if any(msg["messageId"] == message_id for msg in self._holding_queue):
+            return
+
+        self._holding_queue.append(
             {
                 "messageId": message_id,
                 "sender": sender,
@@ -244,12 +263,15 @@ class MX2AntiSpamEngine:
         Returns:
             Tuple[bool, dict]: (Success, Approved message dictionary).
         """
-        for i, msg in enumerate(self.holding_queue):
+        if self.storage_engine:
+            return self.storage_engine.approve_quarantined_sender(message_id)
+
+        for i, msg in enumerate(self._holding_queue):
             if msg["messageId"] == message_id:
                 sender_domain = msg["sender"].split("@")[-1].lower().strip()
-                self.whitelisted_senders.add(msg["sender"].lower().strip())
-                self.whitelisted_senders.add(sender_domain)
-                approved_msg = self.holding_queue.pop(i)
+                self._whitelisted_senders.add(msg["sender"].lower().strip())
+                self._whitelisted_senders.add(sender_domain)
+                approved_msg = self._holding_queue.pop(i)
                 return True, approved_msg
         return False, {}
 
@@ -262,8 +284,11 @@ class MX2AntiSpamEngine:
         Returns:
             bool: True if removed, False otherwise.
         """
-        for i, msg in enumerate(self.holding_queue):
+        if self.storage_engine:
+            return self.storage_engine.reject_quarantined_sender(message_id)
+
+        for i, msg in enumerate(self._holding_queue):
             if msg["messageId"] == message_id:
-                self.holding_queue.pop(i)
+                self._holding_queue.pop(i)
                 return True
         return False

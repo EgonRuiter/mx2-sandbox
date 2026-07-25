@@ -35,7 +35,9 @@ class TestMX2WebServer(unittest.TestCase):
         """Helper to post JSON data to the daemon."""
         url = f"{self.base_url}{path}"
         req_data = json.dumps(data).encode("utf-8")
-        req = urllib.request.Request(url, data=req_data, headers={"Content-Type": "application/json"}, method="POST")
+        req = urllib.request.Request(
+            url, data=req_data, headers={"Content-Type": "application/json", "Connection": "close"}, method="POST"
+        )
         try:
             with urllib.request.urlopen(req) as resp:
                 body = resp.read().decode("utf-8")
@@ -46,6 +48,8 @@ class TestMX2WebServer(unittest.TestCase):
                 return err.code, json.loads(body)
             except Exception:
                 return err.code, {"error": body}
+        except Exception as err:
+            return 500, {"error": str(err)}
 
     def test_metrics_endpoint(self) -> None:
         """Tests that Prometheus metrics are served successfully."""
