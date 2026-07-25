@@ -23,7 +23,9 @@ from src.did_resolver import MX2DIDResolver
 from src.dns_resolver import MX2DNSResolver
 from src.gateway import BilingualGateway
 from src.logger import log_event, setup_logger
+from src.metrics import MX2MetricsEngine
 from src.storage import MX2StorageEngine
+from src.tls_manager import MX2TLSManager
 
 
 class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
@@ -34,9 +36,8 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
     did_resolver = MX2DIDResolver()
     anti_spam = MX2AntiSpamEngine(storage_engine=storage_engine)
     cas_engine = MX2CASEngine()
-
-    # Telemetry metrics counters
-    api_connections_total = 0
+    tls_manager = MX2TLSManager()
+    metrics = MX2MetricsEngine()
 
     def log_message(self, format: str, *args: Any) -> None:
         """Overrides default stderr logs to use our structured JSON logger."""
@@ -44,7 +45,7 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         """Handles telemetry reads. All other GET paths return 404."""
-        MX2SandboxHTTPHandler.api_connections_total += 1
+        self.metrics.inc_api_requests()
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
 
@@ -61,13 +62,14 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
 
     def do_HEAD(self) -> None:
         """Handles HEAD probes for liveness checks."""
+        self.metrics.inc_api_requests()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
 
     def do_POST(self) -> None:
         """Processes incoming REST API requests."""
-        MX2SandboxHTTPHandler.api_connections_total += 1
+        self.metrics.inc_api_requests()
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
 
@@ -124,18 +126,9 @@ class MX2SandboxHTTPHandler(BaseHTTPRequestHandler):
         """Serves Prometheus scraped telemetry counters."""
         try:
             quarantine_len = len(self.anti_spam.holding_queue)
+            prometheus_data = self.metrics.export_prometheus_metrics(quarantine_count=quarantine_len)
 
-            metrics_lines = [
-                "# HELP mx2_api_connections_total Total HTTP API calls resolved.",
-                "# TYPE mx2_api_connections_total counter",
-                f"mx2_api_connections_total {self.api_connections_total}",
-                "",
-                "# HELP mx2_quarantine_count Current number of emails held in the quarantine queue.",
-                "# TYPE mx2_quarantine_count gauge",
-                f"mx2_quarantine_count {quarantine_len}",
-            ]
-
-            response_bytes = "\n".join(metrics_lines).encode("utf-8")
+            response_bytes = prometheus_data.encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; version=0.0.4")
             self.send_header("Content-Length", str(len(response_bytes)))

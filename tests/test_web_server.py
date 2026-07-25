@@ -58,7 +58,7 @@ class TestMX2WebServer(unittest.TestCase):
             self.assertEqual(resp.status, 200)
             self.assertIn(b"text/plain", resp.headers.get("Content-Type", b"").encode())
             body = resp.read().decode("utf-8")
-            self.assertIn("mx2_api_connections_total", body)
+            self.assertIn("mx2_api_requests_total", body)
             self.assertIn("mx2_quarantine_count", body)
 
     def test_invalid_endpoint(self) -> None:
